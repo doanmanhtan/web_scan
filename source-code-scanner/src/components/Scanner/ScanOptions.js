@@ -49,8 +49,7 @@ const mockRules = [
   { id: 10, name: 'Expensive Copy', category: 'performance', tool: 'clangtidy', enabled: true },
 ];
 
-const ScanOptions = ({ onScanTypeChange, onToolSelection, selectedTools }) => {
-  const [scanType, setScanType] = useState('all');
+const ScanOptions = ({ onScanTypeChange, onToolSelection, selectedTools, scanType = 'all' }) => {
   const [ruleDirectory, setRuleDirectory] = useState('./rules');
   const [includeWarnings, setIncludeWarnings] = useState(true);
   const [generateReport, setGenerateReport] = useState(true);
@@ -59,7 +58,6 @@ const ScanOptions = ({ onScanTypeChange, onToolSelection, selectedTools }) => {
 
   const handleScanTypeChange = (event) => {
     const newScanType = event.target.value;
-    setScanType(newScanType);
     
     // Update selected rules based on scan type
     if (newScanType === 'all') {
@@ -76,7 +74,7 @@ const ScanOptions = ({ onScanTypeChange, onToolSelection, selectedTools }) => {
     
     // Notify parent component
     if (onScanTypeChange) {
-      onScanTypeChange(newScanType);
+      onScanTypeChange(event);
     }
   };
 

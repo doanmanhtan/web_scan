@@ -39,13 +39,13 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 
 // Mock data for demonstration
 const mockVulnerabilities = [
-  { id: 1, tool: 'semgrep', severity: 'high', type: 'Buffer Overflow', file: 'main.cpp', line: 42, column: 15, description: 'Potential buffer overflow vulnerability detected. Missing bounds check before memory access.' },
-  { id: 2, tool: 'clangtidy', severity: 'medium', type: 'Memory Leak', file: 'utils.c', line: 87, column: 10, description: 'Memory allocated but never freed, causing memory leak.' },
-  { id: 3, tool: 'snyk', severity: 'high', type: 'Use After Free', file: 'parser.cpp', line: 124, column: 8, description: 'Accessing memory after it has been freed.' },
-  { id: 4, tool: 'semgrep', severity: 'low', type: 'Uninitialized Variable', file: 'config.c', line: 32, column: 20, description: 'Variable may be used before initialization.' },
-  { id: 5, tool: 'clangtidy', severity: 'medium', type: 'Integer Overflow', file: 'math.cpp', line: 74, column: 12, description: 'Potential integer overflow when performing arithmetic operation.' },
-  { id: 6, tool: 'snyk', severity: 'critical', type: 'Format String Vulnerability', file: 'logger.c', line: 53, column: 5, description: 'Format string vulnerability that could lead to arbitrary code execution.' },
-  { id: 7, tool: 'semgrep', severity: 'low', type: 'Redundant Code', file: 'helpers.cpp', line: 91, column: 3, description: 'Redundant code detected that has no effect.' },
+  { id: 1, name: 'Buffer Overflow', severity: 'high', type: 'Memory Safety', file: 'main.cpp', line: 42, column: 15, tool: 'semgrep', status: 'open', description: 'Potential buffer overflow vulnerability detected. Missing bounds check before memory access.' },
+  { id: 2, name: 'Memory Leak', severity: 'medium', type: 'Memory Safety', file: 'utils.c', line: 87, column: 10, tool: 'clangtidy', status: 'open', description: 'Memory allocated but never freed, causing memory leak.' },
+  { id: 3, name: 'Use After Free', severity: 'high', type: 'Memory Safety', file: 'parser.cpp', line: 124, column: 8, tool: 'snyk', status: 'in_progress', description: 'Accessing memory after it has been freed.' },
+  { id: 4, name: 'Uninitialized Variable', severity: 'low', type: 'Code Quality', file: 'config.c', line: 32, column: 20, tool: 'semgrep', status: 'open', description: 'Variable may be used before initialization.' },
+  { id: 5, name: 'Integer Overflow', severity: 'medium', type: 'Security', file: 'math.cpp', line: 74, column: 12, tool: 'clangtidy', status: 'fixed', description: 'Potential integer overflow when performing arithmetic operation.' },
+  { id: 6, name: 'Format String Vulnerability', severity: 'critical', type: 'Security', file: 'logger.c', line: 53, column: 5, tool: 'snyk', status: 'open', description: 'Format string vulnerability that could lead to arbitrary code execution.' },
+  { id: 7, name: 'Redundant Code', severity: 'low', type: 'Code Quality', file: 'helpers.cpp', line: 91, column: 3, tool: 'semgrep', status: 'ignored', description: 'Redundant code detected that has no effect.' },
 ];
 
 // Prepare data for charts
@@ -307,8 +307,8 @@ const ScanResults = () => {
                   }}
                 >
                   <pre style={{ margin: 0 }}>
-                    {/* This would be actual code in a real application */}
                     <code>
+                      {/* This would be actual code in a real application */}
                       {`// Sample code for ${vuln.file}\n`}
                       {`39  void process_data(char* input, size_t size) {\n`}
                       {`40      char buffer[10];\n`}
