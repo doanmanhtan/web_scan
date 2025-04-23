@@ -1,0 +1,69 @@
+body {
+  margin: 0;
+  font-family: 'Roboto', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #bbbbbb;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+
+/* Remove outline from MUI components */
+.MuiOutlinedInput-notchedOutline {
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Custom styles for code syntax highlighting */
+.code-block {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 16px;
+  margin: 8px 0;
+  overflow-x: auto;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.highlight-line {
+  background-color: rgba(255, 0, 0, 0.1);
+  display: block;
+}
+
+/* Custom animations for loading screens */
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
+}
+
+.pulse-animation {
+  animation: pulse 1.5s infinite;
+}
