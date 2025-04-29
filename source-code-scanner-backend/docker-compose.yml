@@ -1,0 +1,87 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # Backend service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: source-scanner-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DB_HOST=mongo
+      - DB_PORT=27017
+      - DB_NAME=source_scanner
+      - DB_USER=${MONGO_USERNAME:-admin}
+      - DB_PASS=${MONGO_PASSWORD:-admin_password}
+      - JWT_SECRET=${JWT_SECRET:-k/QzT/mS+R4MH12y9jK1d0hqC1YkWACMetnEjIQK7KQ=}
+      - SEMGREP_PATH=/usr/local/bin/semgrep
+      - SNYK_PATH=/usr/bin/snyk
+      - CLANGTIDY_PATH=/usr/bin/clang-tidy
+      - LOG_LEVEL=info
+      - MAX_SCAN_THREADS=4
+    volumes:
+      - ./uploads:/app/uploads
+      - ./scans:/app/scans
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+      - ./src:/app/src
+      # Mount rule directories as single locations per tool
+      - ./rules/semgrep:/app/src/rules/semgrep
+      - ./rules/snyk:/app/src/rules/snyk
+      - ./rules/clangtidy:/app/src/rules/clangtidy
+    depends_on:
+      - mongo
+    networks:
+      - source-scanner-network
+    restart: unless-stopped
+
+  # MongoDB service
+  mongo:
+    image: mongo:latest
+    container_name: source-scanner-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-admin_password}
+      - MONGO_INITDB_DATABASE=source_scanner
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - source-scanner-network
+    restart: unless-stopped
+
+  # MongoDB web interface for development
+  mongo-express:
+    image: mongo-express:latest
+    container_name: source-scanner-mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_USERNAME:-admin}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_PASSWORD:-admin_password}
+      - ME_CONFIG_BASICAUTH_USERNAME=${MONGO_EXPRESS_USERNAME:-admin}
+      - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_EXPRESS_PASSWORD:-admin_password}
+    depends_on:
+      - mongo
+    networks:
+      - source-scanner-network
+    restart: unless-stopped
+
+# Docker networks
+networks:
+  source-scanner-network:
+    driver: bridge
+
+# Docker volumes
+volumes:
+  mongo-data:
+    driver: local

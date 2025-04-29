@@ -1,0 +1,17 @@
+rules:
+  - id: buffer-overflow
+    pattern: strcpy($DST, $SRC)
+    message: |
+      Buffer overflow risk detected. The 'strcpy' function does not perform bounds checking,
+      which can lead to buffer overflows if the source string is larger than the destination
+      buffer. Consider using 'strncpy' with an appropriate size check instead.
+    severity: ERROR
+    languages: [c, cpp]
+    metadata:
+      category: security
+      cwe: "CWE-120: Buffer Copy without Checking Size of Input"
+      references:
+        - https://cwe.mitre.org/data/definitions/120.html
+      fix: |
+        strncpy($DST, $SRC, sizeof($DST) - 1);
+        $DST[sizeof($DST) - 1] = '\0';  // Ensure null termination
