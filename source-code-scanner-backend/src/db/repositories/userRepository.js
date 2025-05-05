@@ -1,6 +1,6 @@
 // src/db/repositories/userRepository.js
 const User = require('../models/userModel');
-const { logger } = require('../../utils/logger');
+const logger = require('../../utils/logger');
 
 class UserRepository {
   /**

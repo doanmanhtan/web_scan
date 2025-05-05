@@ -1,6 +1,6 @@
 // src/api/controllers/userController.js
 const userService = require('../../services/userService');
-const { logger } = require('../../utils/logger');
+const logger = require('../../utils/logger');
 
 /**
  * User controller
