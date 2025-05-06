@@ -1,5 +1,6 @@
 // src/services/userService.js
-const { logger } = require('../utils/logger');
+// const { logger } = require('../utils/logger');
+const logger = require('../utils/logger');
 const userRepository = require('../db/repositories/userRepository');
 const { comparePassword, generateToken, hashPassword } = require('../utils/securityUtils');
 const { jwtConfig } = require('../config/auth');

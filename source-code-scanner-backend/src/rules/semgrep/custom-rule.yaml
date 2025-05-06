@@ -1,0 +1,7 @@
+rules:
+  - id: test-rule
+    pattern: |
+      $X = $Y;
+    message: Test rule
+    severity: WARNING
+    languages: [javascript]
