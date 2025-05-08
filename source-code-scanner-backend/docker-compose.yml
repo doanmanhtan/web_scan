@@ -20,6 +20,7 @@ services:
       - DB_PASS=${MONGO_PASSWORD:-admin_password}
       - JWT_SECRET=${JWT_SECRET:-k/QzT/mS+R4MH12y9jK1d0hqC1YkWACMetnEjIQK7KQ=}
       - SEMGREP_PATH=/usr/local/bin/semgrep
+      - SEMGREP_RULES_PATH=/app/rules/semgrep
       - SNYK_PATH=/usr/bin/snyk
       - CLANGTIDY_PATH=/usr/bin/clang-tidy
       - LOG_LEVEL=info
@@ -30,8 +31,8 @@ services:
       - ./reports:/app/reports
       - ./logs:/app/logs
       - ./src:/app/src
-      # Mount rule directories as single locations per tool
-      - ./rules/semgrep:/app/src/rules/semgrep
+      # Mount rule directories
+      - /home/kali/Desktop/Semgrep/semgrep-rules:/app/rules/semgrep
       - ./rules/snyk:/app/src/rules/snyk
       - ./rules/clangtidy:/app/src/rules/clangtidy
     depends_on:

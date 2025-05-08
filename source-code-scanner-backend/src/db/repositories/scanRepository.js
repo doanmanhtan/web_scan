@@ -135,26 +135,46 @@ class ScanRepository {
    * @param {Error} error - Error that caused the failure
    * @returns {Object} Updated scan
    */
+  // async failScan(scanId, error) {
+  //   try {
+  //     return await Scan.findByIdAndUpdate(
+  //       scanId,
+  //       {
+  //         status: 'failed',
+  //         endTime: new Date(),
+  //         error: {
+  //           message: error.message,
+  //           stack: error.stack
+  //         }
+  //       },
+  //       { new: true }
+  //     );
+  //   } catch (dbError) {
+  //     logger.error(`Error marking scan as failed: ${dbError.message}`);
+  //     throw dbError;
+  //   }
+  // }
   async failScan(scanId, error) {
     try {
+      const errorData = {
+        message: error ? error.message : 'Unknown error',
+        stack: error ? error.stack : ''
+      };
+  
       return await Scan.findByIdAndUpdate(
         scanId,
         {
           status: 'failed',
           endTime: new Date(),
-          error: {
-            message: error.message,
-            stack: error.stack
-          }
+          error: errorData
         },
         { new: true }
       );
     } catch (dbError) {
-      logger.error(`Error marking scan as failed: ${dbError.message}`);
-      throw dbError;
+      logger.error(`Error marking scan as failed: ${dbError ? dbError.message : 'Unknown error'}`);
+      throw dbError || new Error('Error marking scan as failed');
     }
   }
-
   /**
    * Delete scan
    * @param {String} scanId - Scan ID

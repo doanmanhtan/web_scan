@@ -60,7 +60,7 @@ class SemgrepScanner {
       args.push(directory);
       
       // Construct command
-      const command = `${this.config.path} ${args.join(' ')}`;
+      const command = `docker run --rm -v "${directory}:/src" -v "${this.config.rules}:/rules" returntocorp/semgrep semgrep --config "/rules" /src --json -o ${outputPath}`;
       
       logger.info(`Running semgrep scan: ${command}`);
       
@@ -108,6 +108,8 @@ class SemgrepScanner {
       });
       
       child.on('error', (error) => {
+        console.error('Command error:', error);
+        console.error('Command output:', stderr);
         logger.error(`Semgrep scan error: ${error.message}`);
         reject(error);
       });

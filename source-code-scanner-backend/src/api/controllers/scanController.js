@@ -10,11 +10,49 @@ const scanController = {
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
+  // createScan: async (req, res) => {
+  //   try {
+  //     console.log('Files received:', req.files ? req.files.length : 'undefined');
+  //     console.log('Request body:', req.body);
+  //     console.log('User info:', req.user);//them
+
+  //     const scanData = req.body;
+  //     const files = req.files;
+  //     const userId = req.user.id;
+      
+  //     if (!files || files.length === 0) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: 'No files uploaded'
+  //       });
+  //     }
+      
+  //     const result = await scanService.createScan(scanData, files, userId);
+      
+  //     res.status(201).json({
+  //       success: true,
+  //       message: 'Scan created successfully',
+  //       data: result
+  //     });
+  //   } catch (error) {
+  //     // logger.error(`Error in createScan controller: ${error.message}`);
+  //     logger.error(`Error in createScan controller: ${error?.message || 'Unknown error'}`);
+      
+  //     res.status(500).json({
+  //       success: false,
+  //       message: 'Error creating scan'
+  //     });
+  //   }
+  // },
   createScan: async (req, res) => {
     try {
+      console.log('Files received:', req.files ? req.files.length : 'undefined');
+      console.log('Request body:', req.body);
+      console.log('User info:', req.user);
+      
       const scanData = req.body;
       const files = req.files;
-      const userId = req.user.id;
+      const userId = req.user?.id;
       
       if (!files || files.length === 0) {
         return res.status(400).json({
@@ -23,23 +61,54 @@ const scanController = {
         });
       }
       
-      const result = await scanService.createScan(scanData, files, userId);
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
       
-      res.status(201).json({
-        success: true,
-        message: 'Scan created successfully',
-        data: result
-      });
+      try {
+        console.log('Calling scanService.createScan with:', {
+          scanData, 
+          fileCount: files.length,
+          userId
+        });
+        
+        const result = await scanService.createScan(scanData, files, userId);
+        
+        res.status(201).json({
+          success: true,
+          message: 'Scan created successfully',
+          data: result
+        });
+        }catch (serviceError) {
+          console.error('Lỗi từ service:', serviceError);
+          
+          // Tạo thông báo lỗi cụ thể hơn dựa trên loại lỗi
+          let errorMessage = 'Lỗi khi tạo quét';
+          if (serviceError.code === 'ENOENT') {
+            errorMessage = 'Lỗi hệ thống tệp - thư mục có thể không tồn tại';
+          } else if (serviceError.name === 'ValidationError') {
+            errorMessage = 'Dữ liệu quét không hợp lệ';
+          }
+          
+          throw new Error(`${errorMessage}: ${serviceError.message || 'Lỗi không xác định'}`);
+      // } catch (serviceError) {
+      //   console.error('Error from service:', serviceError);
+      //   // Không truy cập serviceError.error ở đây
+      //   throw serviceError; // Ném lại lỗi để xử lý ở khối catch ngoài
+      }
     } catch (error) {
-      logger.error(`Error in createScan controller: ${error.message}`);
+      console.error('Controller error:', error);
       
       res.status(500).json({
         success: false,
-        message: 'Error creating scan'
+        message: 'Error creating scan',
+        details: error.message || 'Unknown error'
       });
     }
   },
-
   /**
    * Start a scan
    * @param {Object} req - Express request object

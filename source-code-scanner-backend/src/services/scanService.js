@@ -2,7 +2,7 @@
 const path = require('path');
 const fs = require('fs-extra');
 const { v4: uuidv4 } = require('uuid');
-const { logger } = require('../utils/logger');
+const logger = require('../utils/logger');
 const { createScanDirectory, getSourceCodeFiles } = require('../utils/fileUtils');
 const { countLinesOfCode } = require('../utils/codeParser');
 const scannerFactory = require('../scanners/scannerFactory');
@@ -24,6 +24,7 @@ class ScanService {
    */
   async createScan(scanData, files, userId) {
     try {
+      console.log('====== Starting createScan ======');
       // Create a unique scan directory
       const { scanId, scanDir, uploadDir, resultsDir } = createScanDirectory();
       
@@ -44,7 +45,55 @@ class ScanService {
       }
       
       // Get supported tools
-      const tools = scanData.tools || ['semgrep', 'snyk', 'clangtidy'];
+      // const tools = scanData.tools || ['semgrep', 'snyk', 'clangtidy'];
+      let tools = ['semgrep', 'snyk', 'clangtidy']; // Mặc định
+      if (scanData.tools) {
+        try {
+          if (typeof scanData.tools === 'string') {
+            // Xử lý trường hợp là chuỗi (có thể có dấu ngoặc đơn)
+            let cleanTools = scanData.tools.trim();
+            
+            // Xử lý chuỗi có thể có ngoặc đơn, backtick, hoặc cú pháp mảng
+            if (cleanTools.startsWith('`') && cleanTools.endsWith('`')) {
+              cleanTools = cleanTools.slice(1, -1);
+            }
+            if (cleanTools.startsWith('"') && cleanTools.endsWith('"')) {
+              cleanTools = cleanTools.slice(1, -1);
+            }
+            if (cleanTools.startsWith("'") && cleanTools.endsWith("'")) {
+              cleanTools = cleanTools.slice(1, -1);
+            }
+            
+            // Xử lý nếu là chuỗi JSON
+            if (cleanTools.startsWith('[') && cleanTools.endsWith(']')) {
+              try {
+                // Thử parse nếu là chuỗi JSON
+                const parsed = JSON.parse(cleanTools.replace(/'/g, '"'));
+                if (Array.isArray(parsed)) {
+                  tools = parsed;
+                } else {
+                  // Nếu không phải mảng, phân tách bằng dấu phẩy
+                  tools = cleanTools.split(',').map(t => t.trim());
+                }
+              } catch (e) {
+                // Nếu không parse được, coi như chuỗi phân tách bằng dấu phẩy
+                tools = cleanTools.split(',').map(t => t.trim());
+              }
+            } else {
+              // Chuỗi đơn giản phân tách bằng dấu phẩy
+              tools = cleanTools.split(',').map(t => t.trim());
+            }
+          } else if (Array.isArray(scanData.tools)) {
+            tools = scanData.tools;
+          }
+          
+          // Log tools để debug
+          console.log('Final tools to use:', tools);
+        } catch (toolError) {
+          console.error('Error processing tools:', toolError);
+          // Vẫn giữ mảng mặc định nếu có lỗi
+        }
+      }
       
       // Create scan record
       const scan = await scanRepository.createScan({
@@ -56,15 +105,80 @@ class ScanService {
         scanDirectory: scanDir,
         createdBy: userId
       });
-      
+      console.log('====== Scan record created successfully ======');
       logger.info(`Scan created: ${scanId}`);
       
       return scan;
-    } catch (error) {
-      logger.error(`Error creating scan: ${error.message}`);
-      throw error;
+    }catch (err) {
+      console.log("Error object:", err);
+      console.log("Error type:", typeof err);
+      console.log("Error properties:", Object.keys(err || {}));
+      
+      const errorMessage = err?.message || 'Unknown error';
+      logger.error(`Error creating scan: ${errorMessage}`);
+      throw new Error(`Lỗi khi tạo quét: ${errorMessage}`);
     }
+    // } catch (error) {
+    //   logger.error(`Error creating scan: ${error.message}`);
+    //   throw error;
+    // }
   }
+
+  // async createScan(scanData, files, userId) {
+  //   try {
+  //     console.log('=== Using simplified createScan method ===');
+      
+  //     // Create scan directory
+  //     const scanId = uuidv4();
+  //     const scanDir = path.join(appConfig.scans.directory, scanId);
+  //     const uploadDir = path.join(scanDir, 'uploads');
+      
+  //     // Create directories
+  //     fs.ensureDirSync(scanDir);
+  //     fs.ensureDirSync(uploadDir);
+      
+  //     // Save files
+  //     const uploadedFiles = [];
+  //     for (const file of files) {
+  //       const destPath = path.join(uploadDir, file.originalname);
+  //       await fs.writeFile(destPath, file.buffer);
+  //       uploadedFiles.push({
+  //         originalName: file.originalname,
+  //         fileName: file.originalname,
+  //         filePath: destPath,
+  //         fileSize: file.size,
+  //         fileExt: path.extname(file.originalname)
+  //       });
+  //     }
+      
+  //     // Process tools
+  //     const tools = typeof scanData.tools === 'string' 
+  //       ? scanData.tools.split(',').map(t => t.trim())
+  //       : ['semgrep', 'snyk', 'clangtidy'];
+      
+  //     // Create scan record directly
+  //     const scanRecord = {
+  //       scanId,
+  //       name: scanData.name || `Scan ${new Date().toISOString()}`,
+  //       scanType: scanData.scanType || 'all',
+  //       tools,
+  //       uploadedFiles,
+  //       scanDirectory: scanDir,
+  //       createdBy: userId,
+  //       status: 'pending'
+  //     };
+      
+  //     console.log('Creating scan record:', scanRecord);
+  //     const scan = await scanRepository.createScan(scanRecord);
+  //     console.log('Scan created successfully with ID:', scan._id);
+      
+  //     return scan;
+  //   } catch (err) {
+  //     console.log('Error in simplified createScan:', err);
+  //     // Throw a completely new error to avoid any problem with the original
+  //     throw new Error('Failed to create scan: ' + (err ? err.message : 'Unknown error'));
+  //   }
+  // }
 
   /**
    * Start a scan
@@ -234,9 +348,17 @@ class ScanService {
       
       logger.info(`Scan completed: ${scanId}`);
     } catch (error) {
-      logger.error(`Error running scan: ${error.message}`);
-      await scanRepository.failScan(scanId, error);
-      throw error;
+      logger.error(`Error running scan: ${error?.message || 'Unknown error'}`);
+    // Chắc chắn error tồn tại trước khi truyền vào failScan:
+      if (error) {
+        await scanRepository.failScan(scanId, error);
+      } else {
+        await scanRepository.failScan(scanId, new Error('Unknown scan error'));
+      }
+      throw error || new Error('Unknown scan error');
+      // logger.error(`Error running scan: ${error.message}`);
+      // await scanRepository.failScan(scanId, error);
+      // throw error;
     }
   }
 

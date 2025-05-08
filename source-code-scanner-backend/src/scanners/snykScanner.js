@@ -40,62 +40,109 @@ class SnykScanner {
    */
   scanDirectory(directory, outputPath, options = {}) {
     return new Promise((resolve, reject) => {
+      console.log('Starting Snyk scan for directory:', directory);
+      
       // Ensure output directory exists
       fs.ensureDirSync(path.dirname(outputPath));
       
-      // Prepare arguments
-      const args = [...this.config.defaultArgs];
+      // Get all files in directory
+      const files = fs.readdirSync(directory);
+      console.log('Files found in directory:', files);
       
-      // Add output file - Snyk outputs to stdout, we'll redirect it
+      const cFiles = files.filter(file => file.endsWith('.c'));
+      console.log('C files to scan:', cFiles);
       
-      // Construct command
-      const command = `${this.config.path} ${args.join(' ')} "${directory}" > "${outputPath}"`;
-      
-      logger.info(`Running snyk scan: ${command}`);
-      
-      // Execute command
-      const child = exec(command, {
-        maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-        timeout: this.config.timeoutMs
-      });
-      
-      let stderr = '';
-      
-      child.stderr.on('data', (data) => {
-        stderr += data;
-      });
-      
-      child.on('close', (code) => {
-        // Snyk can return non-zero exit codes when it finds vulnerabilities, but that's not an error
-        if (code !== 0 && code !== 1) {
-          logger.error(`Snyk scan failed with code ${code}: ${stderr}`);
-          reject(new Error(`Snyk scan failed with code ${code}: ${stderr}`));
-          return;
-        }
-        
-        try {
-          // Check if output file exists
-          if (fs.existsSync(outputPath)) {
-            // Read and parse results
-            const rawResults = fs.readFileSync(outputPath, 'utf8');
-            const results = JSON.parse(rawResults);
-            
-            logger.info(`Snyk scan completed successfully, found ${results.vulnerabilities ? results.vulnerabilities.length : 0} issues`);
-            resolve(this.formatResults(results, directory));
-          } else {
-            logger.error('Snyk scan completed but no output file was generated');
-            reject(new Error('Snyk scan completed but no output file was generated'));
+      if (cFiles.length === 0) {
+        console.log('No .c files found in directory');
+        resolve({
+          scanner: this.name,
+          vulnerabilities: [],
+          summary: {
+            total: 0,
+            critical: 0,
+            high: 0,
+            medium: 0,
+            low: 0
           }
-        } catch (error) {
-          logger.error(`Error processing Snyk results: ${error.message}`);
+        });
+        return;
+      }
+
+      // Scan each file individually
+      const scanPromises = cFiles.map(file => {
+        return new Promise((resolveFile, rejectFile) => {
+          const filePath = path.join(directory, file);
+          console.log('Scanning file:', filePath);
+          
+          // Thêm --severity-threshold=low để đảm bảo bắt được tất cả các lỗi
+          const command = `${this.config.path} code test "${filePath}" --json --severity-threshold=low`;
+          console.log('Running command:', command);
+          
+          exec(command, {
+            maxBuffer: 1024 * 1024 * 10,
+            timeout: this.config.timeoutMs
+          }, (error, stdout, stderr) => {
+            console.log('Command output:', stdout);
+            console.log('Command error:', stderr);
+            
+            if (error) {
+              console.log('Command error code:', error.code);
+              // Snyk returns 1 when vulnerabilities are found, which is not an error
+              if (error.code === 1) {
+                try {
+                  const results = JSON.parse(stdout);
+                  console.log('Parsed results:', results);
+                  resolveFile(results);
+                } catch (parseError) {
+                  console.error('Error parsing results:', parseError);
+                  rejectFile(parseError);
+                }
+              } else {
+                console.error('Snyk scan failed:', error);
+                rejectFile(error);
+              }
+              return;
+            }
+
+            try {
+              const results = JSON.parse(stdout);
+              console.log('Parsed results:', results);
+              resolveFile(results);
+            } catch (parseError) {
+              console.error('Error parsing results:', parseError);
+              rejectFile(parseError);
+            }
+          });
+        });
+      });
+
+      // Wait for all scans to complete
+      Promise.all(scanPromises)
+        .then(results => {
+          console.log('All scans completed. Results:', results);
+          
+          // Combine results from all files
+          const combinedResults = {
+            vulnerabilities: results.reduce((acc, result) => {
+              if (result.vulnerabilities) {
+                return [...acc, ...result.vulnerabilities];
+              }
+              return acc;
+            }, [])
+          };
+
+          console.log('Combined results:', combinedResults);
+
+          // Write combined results to output file
+          fs.writeFileSync(outputPath, JSON.stringify(combinedResults, null, 2));
+          
+          console.log(`Snyk scan completed successfully, found ${combinedResults.vulnerabilities.length} issues`);
+          resolve(this.formatResults(combinedResults, directory));
+        })
+        .catch(error => {
+          console.error('Error in Snyk scan:', error);
           reject(error);
-        }
-      });
-      
-      child.on('error', (error) => {
-        logger.error(`Snyk scan error: ${error.message}`);
-        reject(error);
-      });
+        });
     });
   }
 

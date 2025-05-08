@@ -23,7 +23,7 @@ const appConfig = {
   
   // Scan settings
   scans: {
-    directory: process.env.SCAN_RESULTS_DIR || './scans',
+    directory: process.env.SCAN_RESULTS_DIR || '/home/kali/Desktop/web/web_scan/source-code-scanner-backend/scans',
     defaultScanType: 'all' // 'all', 'security', 'quality', 'performance'
   }
 };

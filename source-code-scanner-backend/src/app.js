@@ -52,6 +52,11 @@ app.use(`${API_PREFIX}/reports`, reportRoutes);
 app.use(`${API_PREFIX}/users`, userRoutes);
 app.use(`${API_PREFIX}/settings`, settingsRoutes);
 
+//tes
+const testRoutes = require('./api/routes/testRoutes');
+// Thêm dòng này vào phần routes (trước middleware xử lý lỗi)
+app.use(`${API_PREFIX}/test`, testRoutes);
+
 // Health check endpoint
 app.get(`${API_PREFIX}/health`, (req, res) => {
   res.status(200).json({ status: 'UP', timestamp: new Date() });
