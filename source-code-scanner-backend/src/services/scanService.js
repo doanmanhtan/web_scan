@@ -118,67 +118,7 @@ class ScanService {
       logger.error(`Error creating scan: ${errorMessage}`);
       throw new Error(`Lỗi khi tạo quét: ${errorMessage}`);
     }
-    // } catch (error) {
-    //   logger.error(`Error creating scan: ${error.message}`);
-    //   throw error;
-    // }
   }
-
-  // async createScan(scanData, files, userId) {
-  //   try {
-  //     console.log('=== Using simplified createScan method ===');
-      
-  //     // Create scan directory
-  //     const scanId = uuidv4();
-  //     const scanDir = path.join(appConfig.scans.directory, scanId);
-  //     const uploadDir = path.join(scanDir, 'uploads');
-      
-  //     // Create directories
-  //     fs.ensureDirSync(scanDir);
-  //     fs.ensureDirSync(uploadDir);
-      
-  //     // Save files
-  //     const uploadedFiles = [];
-  //     for (const file of files) {
-  //       const destPath = path.join(uploadDir, file.originalname);
-  //       await fs.writeFile(destPath, file.buffer);
-  //       uploadedFiles.push({
-  //         originalName: file.originalname,
-  //         fileName: file.originalname,
-  //         filePath: destPath,
-  //         fileSize: file.size,
-  //         fileExt: path.extname(file.originalname)
-  //       });
-  //     }
-      
-  //     // Process tools
-  //     const tools = typeof scanData.tools === 'string' 
-  //       ? scanData.tools.split(',').map(t => t.trim())
-  //       : ['semgrep', 'snyk', 'clangtidy'];
-      
-  //     // Create scan record directly
-  //     const scanRecord = {
-  //       scanId,
-  //       name: scanData.name || `Scan ${new Date().toISOString()}`,
-  //       scanType: scanData.scanType || 'all',
-  //       tools,
-  //       uploadedFiles,
-  //       scanDirectory: scanDir,
-  //       createdBy: userId,
-  //       status: 'pending'
-  //     };
-      
-  //     console.log('Creating scan record:', scanRecord);
-  //     const scan = await scanRepository.createScan(scanRecord);
-  //     console.log('Scan created successfully with ID:', scan._id);
-      
-  //     return scan;
-  //   } catch (err) {
-  //     console.log('Error in simplified createScan:', err);
-  //     // Throw a completely new error to avoid any problem with the original
-  //     throw new Error('Failed to create scan: ' + (err ? err.message : 'Unknown error'));
-  //   }
-  // }
 
   /**
    * Start a scan
@@ -236,142 +176,371 @@ class ScanService {
     }
   }
 
+  // /**
+  //  * Run scan process
+  //  * @param {String} scanId - Scan ID
+  //  */
+  // async runScan(scanId) {
+  //   try {
+  //     // Get scan by ID
+  //     const scan = await scanRepository.getScanById(scanId);
+      
+  //     if (!scan) {
+  //       throw new Error(`Scan not found: ${scanId}`);
+  //     }
+      
+  //     // Get upload directory and create results directory
+  //     const uploadDir = path.join(scan.scanDirectory, 'uploads');
+  //     const resultsDir = path.join(scan.scanDirectory, 'results');
+      
+  //     fs.ensureDirSync(resultsDir);
+      
+  //     // Find all source code files
+  //     const scanProgress = {
+  //       filesScanned: 0,
+  //       progress: 0
+  //     };
+      
+  //     // Update progress
+  //     await this.updateScanProgress(scanId, scan, 5, scanProgress);
+      
+  //     // Get all source code files
+  //     const allFiles = await getSourceCodeFiles(uploadDir);
+      
+  //     if (allFiles.length === 0) {
+  //       logger.warn(`No source code files found in scan ${scanId}`);
+  //       await scanRepository.updateScan(scanId, {
+  //         status: 'completed',
+  //         progress: 100,
+  //         endTime: new Date(),
+  //         duration: new Date() - scan.startTime,
+  //         filesScanned: 0
+  //       });
+  //       return;
+  //     }
+      
+  //     // Count lines of code
+  //     const linesOfCodeResult = await countLinesOfCode(allFiles);
+      
+  //     // Update progress
+  //     scanProgress.filesScanned = linesOfCodeResult.totalFiles;
+  //     await this.updateScanProgress(scanId, scan, 10, scanProgress);
+      
+  //     // Get file extensions for scanner selection
+  //     const fileExtensions = [...new Set(allFiles.map(file => path.extname(file)))];
+      
+  //     // Get scanners for selected tools
+  //     const scanners = scan.tools.map(tool => scannerFactory.createScanner(tool));
+      
+  //     // Update progress
+  //     await this.updateScanProgress(scanId, scan, 15, scanProgress);
+      
+  //     // Run scanners
+  //     const scanResults = [];
+  //     let completedScanners = 0;
+      
+  //     // Run scanners in parallel with a limit
+  //     const chunkSize = maxScanThreads;
+  //     const scannerChunks = [];
+      
+  //     for (let i = 0; i < scanners.length; i += chunkSize) {
+  //       scannerChunks.push(scanners.slice(i, i + chunkSize));
+  //     }
+      
+  //     for (const scannerChunk of scannerChunks) {
+  //       const chunkPromises = scannerChunk.map(async scanner => {
+  //         try {
+  //           const outputPath = path.join(resultsDir, `${scanner.name}-results.json`);
+  //           const scannerResult = await scanner.scanDirectory(uploadDir, outputPath);
+  //           scanResults.push(scannerResult);
+            
+  //           // Update progress
+  //           completedScanners++;
+  //           const progressIncrement = 70 / scanners.length; // 70% of progress for scanning
+  //           const newProgress = 15 + (progressIncrement * completedScanners);
+  //           await this.updateScanProgress(scanId, scan, newProgress, scanProgress);
+            
+  //           return scannerResult;
+  //         } catch (error) {
+  //           logger.error(`Error running scanner ${scanner.name}: ${error.message}`);
+  //           return {
+  //             scanner: scanner.name,
+  //             vulnerabilities: [],
+  //             summary: {
+  //               total: 0,
+  //               critical: 0,
+  //               high: 0,
+  //               medium: 0,
+  //               low: 0
+  //             },
+  //             error: error.message
+  //           };
+  //         }
+  //       });
+        
+  //       await Promise.all(chunkPromises);
+  //     }
+      
+  //     // Update progress
+  //     await this.updateScanProgress(scanId, scan, 85, scanProgress);
+      
+  //     // Process and save vulnerabilities
+  //     await this.processScanResults(scanId, scanResults);
+      
+  //     // Update progress
+  //     await this.updateScanProgress(scanId, scan, 95, scanProgress);
+      
+  //     // Complete scan
+  //     await scanRepository.completeScan(scanId, {
+  //       filesScanned: linesOfCodeResult.totalFiles,
+  //       linesOfCode: linesOfCodeResult.totalLines,
+  //       issuesCounts: this.aggregateIssueCounts(scanResults)
+  //     });
+      
+  //     logger.info(`Scan completed: ${scanId}`);
+  //   } catch (error) {
+  //     logger.error(`Error running scan: ${error?.message || 'Unknown error'}`);
+  //   // Chắc chắn error tồn tại trước khi truyền vào failScan:
+  //     if (error) {
+  //       await scanRepository.failScan(scanId, error);
+  //     } else {
+  //       await scanRepository.failScan(scanId, new Error('Unknown scan error'));
+  //     }
+  //     throw error || new Error('Unknown scan error');
+  //     // logger.error(`Error running scan: ${error.message}`);
+  //     // await scanRepository.failScan(scanId, error);
+  //     // throw error;
+  //   }
+  // }
+
   /**
-   * Run scan process
-   * @param {String} scanId - Scan ID
-   */
-  async runScan(scanId) {
-    try {
-      // Get scan by ID
-      const scan = await scanRepository.getScanById(scanId);
-      
-      if (!scan) {
-        throw new Error(`Scan not found: ${scanId}`);
+ * Run scan process with improved error handling
+ * @param {String} scanId - Scan ID
+ */
+async runScan(scanId) {
+  try {
+    // Get scan by ID
+    const scan = await scanRepository.getScanById(scanId);
+    
+    if (!scan) {
+      throw new Error(`Scan not found: ${scanId}`);
+    }
+    
+    console.log(`Starting scan execution for ${scanId}`);
+    console.log(`Scan directory: ${scan.scanDirectory}`);
+    console.log(`Tools to use: ${scan.tools.join(', ')}`);
+    
+    // Get upload directory and create results directory
+    const uploadDir = path.join(scan.scanDirectory, 'uploads');
+    const resultsDir = path.join(scan.scanDirectory, 'results');
+    
+    // Validate directories exist
+    if (!fs.existsSync(uploadDir)) {
+      throw new Error(`Upload directory not found: ${uploadDir}`);
+    }
+    
+    fs.ensureDirSync(resultsDir);
+    
+    // Find all source code files
+    const scanProgress = {
+      filesScanned: 0,
+      progress: 0
+    };
+    
+    // Update progress
+    await this.updateScanProgress(scanId, scan, 5, scanProgress);
+    
+    // Get all source code files
+    const allFiles = await getSourceCodeFiles(uploadDir);
+    console.log(`Found ${allFiles.length} source code files to scan`);
+    
+    if (allFiles.length === 0) {
+      logger.warn(`No source code files found in scan ${scanId}`);
+      await scanRepository.updateScan(scanId, {
+        status: 'completed',
+        progress: 100,
+        endTime: new Date(),
+        duration: new Date() - scan.startTime,
+        filesScanned: 0
+      });
+      return;
+    }
+    
+    // Count lines of code
+    const linesOfCodeResult = await countLinesOfCode(allFiles);
+    console.log(`Total lines of code: ${linesOfCodeResult.totalLines}`);
+    
+    // Update progress
+    scanProgress.filesScanned = linesOfCodeResult.totalFiles;
+    await this.updateScanProgress(scanId, scan, 10, scanProgress);
+    
+    // Get scanners for selected tools with validation
+    const scanners = [];
+    const invalidTools = [];
+    
+    for (const tool of scan.tools) {
+      try {
+        const scanner = scannerFactory.createScanner(tool);
+        
+        // Check if scanner is properly installed
+        const isInstalled = await scanner.checkInstallation();
+        if (isInstalled) {
+          scanners.push({ scanner, tool });
+          console.log(`✓ ${tool} scanner is ready`);
+        } else {
+          console.warn(`✗ ${tool} scanner is not properly installed, skipping`);
+          invalidTools.push(tool);
+        }
+      } catch (error) {
+        console.error(`Error initializing ${tool} scanner:`, error.message);
+        invalidTools.push(tool);
       }
-      
-      // Get upload directory and create results directory
-      const uploadDir = path.join(scan.scanDirectory, 'uploads');
-      const resultsDir = path.join(scan.scanDirectory, 'results');
-      
-      fs.ensureDirSync(resultsDir);
-      
-      // Find all source code files
-      const scanProgress = {
-        filesScanned: 0,
-        progress: 0
-      };
-      
-      // Update progress
-      await this.updateScanProgress(scanId, scan, 5, scanProgress);
-      
-      // Get all source code files
-      const allFiles = await getSourceCodeFiles(uploadDir);
-      
-      if (allFiles.length === 0) {
-        logger.warn(`No source code files found in scan ${scanId}`);
-        await scanRepository.updateScan(scanId, {
-          status: 'completed',
-          progress: 100,
-          endTime: new Date(),
-          duration: new Date() - scan.startTime,
-          filesScanned: 0
-        });
-        return;
-      }
-      
-      // Count lines of code
-      const linesOfCodeResult = await countLinesOfCode(allFiles);
-      
-      // Update progress
-      scanProgress.filesScanned = linesOfCodeResult.totalFiles;
-      await this.updateScanProgress(scanId, scan, 10, scanProgress);
-      
-      // Get file extensions for scanner selection
-      const fileExtensions = [...new Set(allFiles.map(file => path.extname(file)))];
-      
-      // Get scanners for selected tools
-      const scanners = scan.tools.map(tool => scannerFactory.createScanner(tool));
-      
-      // Update progress
-      await this.updateScanProgress(scanId, scan, 15, scanProgress);
-      
-      // Run scanners
-      const scanResults = [];
-      let completedScanners = 0;
-      
-      // Run scanners in parallel with a limit
-      const chunkSize = maxScanThreads;
-      const scannerChunks = [];
-      
-      for (let i = 0; i < scanners.length; i += chunkSize) {
-        scannerChunks.push(scanners.slice(i, i + chunkSize));
-      }
-      
-      for (const scannerChunk of scannerChunks) {
-        const chunkPromises = scannerChunk.map(async scanner => {
-          try {
-            const outputPath = path.join(resultsDir, `${scanner.name}-results.json`);
-            const scannerResult = await scanner.scanDirectory(uploadDir, outputPath);
-            scanResults.push(scannerResult);
-            
-            // Update progress
-            completedScanners++;
-            const progressIncrement = 70 / scanners.length; // 70% of progress for scanning
-            const newProgress = 15 + (progressIncrement * completedScanners);
-            await this.updateScanProgress(scanId, scan, newProgress, scanProgress);
-            
-            return scannerResult;
-          } catch (error) {
-            logger.error(`Error running scanner ${scanner.name}: ${error.message}`);
-            return {
-              scanner: scanner.name,
-              vulnerabilities: [],
-              summary: {
-                total: 0,
-                critical: 0,
-                high: 0,
-                medium: 0,
-                low: 0
-              },
-              error: error.message
-            };
-          }
+    }
+    
+    if (scanners.length === 0) {
+      throw new Error(`No valid scanners available. Invalid tools: ${invalidTools.join(', ')}`);
+    }
+    
+    console.log(`Using ${scanners.length} scanners: ${scanners.map(s => s.tool).join(', ')}`);
+    
+    // Update progress
+    await this.updateScanProgress(scanId, scan, 15, scanProgress);
+    
+    // Run scanners with improved error handling
+    const scanResults = [];
+    let completedScanners = 0;
+    
+    // Process scanners sequentially to avoid resource conflicts
+    for (const { scanner, tool } of scanners) {
+      try {
+        console.log(`\n=== Starting ${tool} scan ===`);
+        const startTime = Date.now();
+        
+        const outputPath = path.join(resultsDir, `${scanner.name}-results.json`);
+        const scannerResult = await this.runScannerWithTimeout(scanner, uploadDir, outputPath, tool);
+        
+        const duration = Date.now() - startTime;
+        console.log(`${tool} scan completed in ${duration}ms`);
+        console.log(`${tool} found ${scannerResult.vulnerabilities?.length || 0} issues`);
+        
+        scanResults.push(scannerResult);
+        
+        // Update progress
+        completedScanners++;
+        const progressIncrement = 70 / scanners.length; // 70% of progress for scanning
+        const newProgress = 15 + (progressIncrement * completedScanners);
+        await this.updateScanProgress(scanId, scan, newProgress, scanProgress);
+        
+      } catch (scannerError) {
+        console.error(`Error running ${tool} scanner:`, scannerError.message);
+        
+        // Add empty result for failed scanner
+        scanResults.push({
+          scanner: tool,
+          vulnerabilities: [],
+          summary: {
+            total: 0,
+            critical: 0,
+            high: 0,
+            medium: 0,
+            low: 0
+          },
+          error: scannerError.message
         });
         
-        await Promise.all(chunkPromises);
+        // Still update progress
+        completedScanners++;
+        const progressIncrement = 70 / scanners.length;
+        const newProgress = 15 + (progressIncrement * completedScanners);
+        await this.updateScanProgress(scanId, scan, newProgress, scanProgress);
       }
-      
-      // Update progress
-      await this.updateScanProgress(scanId, scan, 85, scanProgress);
-      
-      // Process and save vulnerabilities
-      await this.processScanResults(scanId, scanResults);
-      
-      // Update progress
-      await this.updateScanProgress(scanId, scan, 95, scanProgress);
-      
-      // Complete scan
-      await scanRepository.completeScan(scanId, {
-        filesScanned: linesOfCodeResult.totalFiles,
-        linesOfCode: linesOfCodeResult.totalLines,
-        issuesCounts: this.aggregateIssueCounts(scanResults)
-      });
-      
-      logger.info(`Scan completed: ${scanId}`);
-    } catch (error) {
-      logger.error(`Error running scan: ${error?.message || 'Unknown error'}`);
-    // Chắc chắn error tồn tại trước khi truyền vào failScan:
-      if (error) {
-        await scanRepository.failScan(scanId, error);
-      } else {
-        await scanRepository.failScan(scanId, new Error('Unknown scan error'));
-      }
-      throw error || new Error('Unknown scan error');
-      // logger.error(`Error running scan: ${error.message}`);
-      // await scanRepository.failScan(scanId, error);
-      // throw error;
     }
+    
+    // Update progress
+    await this.updateScanProgress(scanId, scan, 85, scanProgress);
+    
+    // Process and save vulnerabilities
+    await this.processScanResults(scanId, scanResults);
+    
+    // Update progress
+    await this.updateScanProgress(scanId, scan, 95, scanProgress);
+    
+    // Complete scan
+    const issuesCounts = this.aggregateIssueCounts(scanResults);
+    console.log(`\nScan completed with ${issuesCounts.total} total issues:`);
+    console.log(`- Critical: ${issuesCounts.critical}`);
+    console.log(`- High: ${issuesCounts.high}`);
+    console.log(`- Medium: ${issuesCounts.medium}`);
+    console.log(`- Low: ${issuesCounts.low}`);
+    
+    await scanRepository.completeScan(scanId, {
+      filesScanned: linesOfCodeResult.totalFiles,
+      linesOfCode: linesOfCodeResult.totalLines,
+      issuesCounts
+    });
+    
+    logger.info(`Scan completed: ${scanId}`);
+  } catch (error) {
+    console.error(`Error running scan ${scanId}:`, error.message);
+    logger.error(`Error running scan: ${error?.message || 'Unknown error'}`);
+    
+    // Ensure error object exists before passing to failScan
+    const errorToReport = error || new Error('Unknown scan error');
+    await scanRepository.failScan(scanId, errorToReport);
+    throw errorToReport;
   }
+}
+
+/**
+ * Run a scanner with timeout and better error handling
+ * @param {Object} scanner - Scanner instance
+ * @param {String} uploadDir - Upload directory
+ * @param {String} outputPath - Output file path
+ * @param {String} toolName - Tool name for logging
+ * @returns {Promise<Object>} Scanner results
+ */
+async runScannerWithTimeout(scanner, uploadDir, outputPath, toolName) {
+  return new Promise(async (resolve, reject) => {
+    // Set up timeout
+    const timeout = setTimeout(() => {
+      reject(new Error(`${toolName} scan timed out after ${scanner.config.timeoutMs || 300000}ms`));
+    }, scanner.config.timeoutMs || 300000);
+    
+    try {
+      console.log(`Running ${toolName} scanner on ${uploadDir}`);
+      const result = await scanner.scanDirectory(uploadDir, outputPath);
+      
+      clearTimeout(timeout);
+      
+      // Validate result structure
+      if (!result || typeof result !== 'object') {
+        throw new Error(`${toolName} returned invalid result format`);
+      }
+      
+      // Ensure required properties exist
+      if (!result.vulnerabilities) {
+        result.vulnerabilities = [];
+      }
+      
+      if (!result.summary) {
+        result.summary = {
+          total: result.vulnerabilities.length,
+          critical: 0,
+          high: 0,
+          medium: 0,
+          low: 0
+        };
+      }
+      
+      resolve(result);
+    } catch (error) {
+      clearTimeout(timeout);
+      console.error(`${toolName} scanner error:`, error.message);
+      reject(error);
+    }
+  });
+}
+
 
   /**
    * Update scan progress
@@ -395,63 +564,152 @@ class ScanService {
     }
   }
 
-  /**
-   * Process scan results and save vulnerabilities
-   * @param {String} scanId - Scan ID
-   * @param {Array} scanResults - Scan results from all scanners
-   */
-  async processScanResults(scanId, scanResults) {
-    try {
-      const scan = await scanRepository.getScanById(scanId);
+  // /**
+  //  * Process scan results and save vulnerabilities
+  //  * @param {String} scanId - Scan ID
+  //  * @param {Array} scanResults - Scan results from all scanners
+  //  */
+  // async processScanResults(scanId, scanResults) {
+  //   try {
+  //     const scan = await scanRepository.getScanById(scanId);
       
-      if (!scan) {
-        throw new Error(`Scan not found: ${scanId}`);
-      }
+  //     if (!scan) {
+  //       throw new Error(`Scan not found: ${scanId}`);
+  //     }
       
-      // Delete existing vulnerabilities
-      await vulnerabilityRepository.deleteVulnerabilitiesByScan(scanId);
+  //     // Delete existing vulnerabilities
+  //     await vulnerabilityRepository.deleteVulnerabilitiesByScan(scanId);
       
-      // Process vulnerabilities from all scanners
-      const vulnerabilities = [];
+  //     // Process vulnerabilities from all scanners
+  //     const vulnerabilities = [];
       
-      for (const result of scanResults) {
-        if (result.vulnerabilities && result.vulnerabilities.length > 0) {
-          for (const vuln of result.vulnerabilities) {
-            vulnerabilities.push({
-              scan: scanId,
-              name: vuln.name,
-              severity: vuln.severity,
-              type: vuln.type,
-              tool: vuln.tool,
-              file: vuln.file,
-              location: vuln.location,
-              description: vuln.description,
-              codeSnippet: vuln.codeSnippet,
-              remediation: vuln.remediation,
-              references: vuln.references,
-              status: 'open'
-            });
-          }
-        }
-      }
+  //     for (const result of scanResults) {
+  //       if (result.vulnerabilities && result.vulnerabilities.length > 0) {
+  //         for (const vuln of result.vulnerabilities) {
+  //           vulnerabilities.push({
+  //             scan: scanId,
+  //             name: vuln.name,
+  //             severity: vuln.severity,
+  //             type: vuln.type,
+  //             tool: vuln.tool,
+  //             file: vuln.file,
+  //             location: vuln.location,
+  //             description: vuln.description,
+  //             codeSnippet: vuln.codeSnippet,
+  //             remediation: vuln.remediation,
+  //             references: vuln.references,
+  //             status: 'open'
+  //           });
+  //         }
+  //       }
+  //     }
       
-      if (vulnerabilities.length > 0) {
-        // Insert vulnerabilities in chunks to avoid MongoDB document size limit
-        const chunkSize = 100;
-        for (let i = 0; i < vulnerabilities.length; i += chunkSize) {
-          const chunk = vulnerabilities.slice(i, i + chunkSize);
-          await vulnerabilityRepository.createBulkVulnerabilities(chunk);
-        }
+  //     if (vulnerabilities.length > 0) {
+  //       // Insert vulnerabilities in chunks to avoid MongoDB document size limit
+  //       const chunkSize = 100;
+  //       for (let i = 0; i < vulnerabilities.length; i += chunkSize) {
+  //         const chunk = vulnerabilities.slice(i, i + chunkSize);
+  //         await vulnerabilityRepository.createBulkVulnerabilities(chunk);
+  //       }
         
-        logger.info(`Saved ${vulnerabilities.length} vulnerabilities for scan ${scanId}`);
-      } else {
-        logger.info(`No vulnerabilities found for scan ${scanId}`);
-      }
-    } catch (error) {
-      logger.error(`Error processing scan results: ${error.message}`);
-      throw error;
+  //       logger.info(`Saved ${vulnerabilities.length} vulnerabilities for scan ${scanId}`);
+  //     } else {
+  //       logger.info(`No vulnerabilities found for scan ${scanId}`);
+  //     }
+  //   } catch (error) {
+  //     logger.error(`Error processing scan results: ${error.message}`);
+  //     throw error;
+  //   }
+  // }
+
+  /** vua sua
+ * Enhanced error handling for process scan results
+ * @param {String} scanId - Scan ID
+ * @param {Array} scanResults - Scan results from all scanners
+ */
+async processScanResults(scanId, scanResults) {
+  try {
+    const scan = await scanRepository.getScanById(scanId);
+    
+    if (!scan) {
+      throw new Error(`Scan not found: ${scanId}`);
     }
+    
+    console.log(`Processing results from ${scanResults.length} scanners`);
+    
+    // Delete existing vulnerabilities
+    await vulnerabilityRepository.deleteVulnerabilitiesByScan(scanId);
+    
+    // Process vulnerabilities from all scanners
+    const vulnerabilities = [];
+    let totalProcessed = 0;
+    
+    for (const result of scanResults) {
+      if (!result.vulnerabilities || !Array.isArray(result.vulnerabilities)) {
+        console.warn(`Invalid vulnerabilities array from ${result.scanner || 'unknown'} scanner`);
+        continue;
+      }
+      
+      console.log(`Processing ${result.vulnerabilities.length} vulnerabilities from ${result.scanner || 'unknown'}`);
+      
+      for (const vuln of result.vulnerabilities) {
+        try {
+          // Validate vulnerability structure
+          if (!vuln.name || !vuln.severity || !vuln.tool) {
+            console.warn('Skipping invalid vulnerability:', vuln);
+            continue;
+          }
+          
+          vulnerabilities.push({
+            scan: scanId,
+            name: vuln.name,
+            severity: vuln.severity,
+            type: vuln.type || 'Unknown',
+            tool: vuln.tool,
+            file: vuln.file || { fileName: 'unknown', filePath: 'unknown', fileExt: '' },
+            location: vuln.location || { line: 1, column: 1 },
+            description: vuln.description || 'No description provided',
+            codeSnippet: vuln.codeSnippet || { line: '', before: [], after: [] },
+            remediation: vuln.remediation || { description: 'No remediation provided' },
+            references: vuln.references || [],
+            status: 'open'
+          });
+          
+          totalProcessed++;
+        } catch (vulnError) {
+          console.error('Error processing vulnerability:', vulnError.message);
+        }
+      }
+    }
+    
+    console.log(`Processed ${totalProcessed} vulnerabilities total`);
+    
+    if (vulnerabilities.length > 0) {
+      // Insert vulnerabilities in chunks to avoid MongoDB document size limit
+      const chunkSize = 100;
+      let insertedCount = 0;
+      
+      for (let i = 0; i < vulnerabilities.length; i += chunkSize) {
+        const chunk = vulnerabilities.slice(i, i + chunkSize);
+        try {
+          await vulnerabilityRepository.createBulkVulnerabilities(chunk);
+          insertedCount += chunk.length;
+          console.log(`Inserted ${insertedCount}/${vulnerabilities.length} vulnerabilities`);
+        } catch (insertError) {
+          console.error(`Error inserting vulnerability chunk ${i}-${i + chunkSize}:`, insertError.message);
+        }
+      }
+      
+      logger.info(`Saved ${insertedCount} vulnerabilities for scan ${scanId}`);
+    } else {
+      logger.info(`No vulnerabilities found for scan ${scanId}`);
+    }
+  } catch (error) {
+    console.error(`Error processing scan results for ${scanId}:`, error.message);
+    logger.error(`Error processing scan results: ${error.message}`);
+    throw error;
   }
+}
 
   /**
    * Aggregate issue counts from all scanners
