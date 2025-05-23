@@ -5,7 +5,8 @@ const scanSchema = new mongoose.Schema({
   scanId: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    index: true
   },
   name: {
     type: String,
@@ -15,7 +16,8 @@ const scanSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ['pending', 'in_progress', 'completed', 'failed', 'cancelled'],
-    default: 'pending'
+    default: 'pending',
+    index: true
   },
   scanType: {
     type: String,
@@ -69,7 +71,8 @@ const scanSchema = new mongoose.Schema({
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    index: true
   },
   error: {
     message: String,
@@ -90,10 +93,7 @@ scanSchema.virtual('scanDuration').get(function() {
   return this.endTime - this.startTime;
 });
 
-// Index for faster queries
-scanSchema.index({ scanId: 1 });
-scanSchema.index({ createdBy: 1 });
-scanSchema.index({ status: 1 });
+// Compound index for faster queries
 scanSchema.index({ createdAt: -1 });
 
 const Scan = mongoose.model('Scan', scanSchema);

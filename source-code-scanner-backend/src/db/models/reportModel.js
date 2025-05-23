@@ -5,12 +5,14 @@ const reportSchema = new mongoose.Schema({
   reportId: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    index: true
   },
   scan: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Scan',
-    required: true
+    required: true,
+    index: true
   },
   name: {
     type: String,
@@ -41,7 +43,8 @@ const reportSchema = new mongoose.Schema({
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    index: true
   },
   shared: {
     type: Boolean,

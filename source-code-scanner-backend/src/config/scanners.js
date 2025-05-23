@@ -13,7 +13,8 @@ const scannerConfig = {
     defaultArgs: ['--json'],
     timeoutMs: parseInt(process.env.SEMGREP_TIMEOUT_MS) || 300000, // 5 minutes default
     supportedFileTypes: ['.c', '.cpp', '.h', '.hpp', '.js', '.py', '.java', '.go'],
-    rules: path.join(__dirname, '../rules')// co thay doi
+    rules: process.env.SEMGREP_RULES_PATH || path.join(__dirname, '../rules/semgrep')
+    // rules: path.join(__dirname, '../rules')// co thay doi
   },
   snyk: {
     path: process.env.SNYK_PATH || '/usr/local/bin/snyk',

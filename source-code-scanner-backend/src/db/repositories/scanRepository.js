@@ -26,9 +26,13 @@ class ScanRepository {
    */
   async getScanById(scanId) {
     try {
-      return await Scan.findById(scanId);
+      const scan = await Scan.findById(scanId);
+      if (!scan) {
+        throw new Error(`Scan not found: ${scanId}`);
+      }
+      return scan;
     } catch (error) {
-      logger.error(`Error getting scan by ID: ${error.message}`);
+      console.error('Error in getScanById:', error);
       throw error;
     }
   }
@@ -55,13 +59,19 @@ class ScanRepository {
    */
   async updateScan(scanId, updateData) {
     try {
-      return await Scan.findByIdAndUpdate(
+      const scan = await Scan.findByIdAndUpdate(
         scanId,
-        updateData,
-        { new: true, runValidators: true }
+        { $set: updateData },
+        { new: true }
       );
+      
+      if (!scan) {
+        throw new Error(`Scan not found: ${scanId}`);
+      }
+      
+      return scan;
     } catch (error) {
-      logger.error(`Error updating scan: ${error.message}`);
+      console.error('Error in updateScan:', error);
       throw error;
     }
   }

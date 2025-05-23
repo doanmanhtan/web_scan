@@ -117,8 +117,39 @@ const scanController = {
   startScan: async (req, res) => {
     try {
       const scanId = req.params.id;
+      console.log('Starting scan with ID:', scanId);
       
-      const result = await scanService.startScan(scanId);
+      if (!scanId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Scan ID is required'
+        });
+      }
+
+      // First try to get scan by MongoDB ID
+      let scan;
+      try {
+        scan = await scanService.getScanById(scanId);
+      } catch (error) {
+        // If MongoDB ID fails, try with scanId
+        try {
+          scan = await scanService.getScanByUniqueId(scanId);
+        } catch (secondError) {
+          return res.status(404).json({
+            success: false,
+            message: 'Scan not found'
+          });
+        }
+      }
+
+      if (!scan) {
+        return res.status(404).json({
+          success: false,
+          message: 'Scan not found'
+        });
+      }
+
+      const result = await scanService.startScan(scan._id);
       
       res.status(200).json({
         success: true,
@@ -126,25 +157,35 @@ const scanController = {
         data: result
       });
     } catch (error) {
-      logger.error(`Error in startScan controller: ${error.message}`);
+      console.error('Error in startScan:', error);
       
-      if (error.message.includes('not found')) {
+      // Xử lý các loại lỗi cụ thể
+      if (error.message && error.message.includes('not found')) {
         return res.status(404).json({
           success: false,
           message: 'Scan not found'
         });
       }
       
-      if (error.message.includes('already in progress') || error.message.includes('already completed')) {
+      if (error.message && error.message.includes('already in progress')) {
         return res.status(400).json({
           success: false,
           message: error.message
         });
       }
       
+      if (error.message && error.message.includes('already completed')) {
+        return res.status(400).json({
+          success: false,
+          message: error.message
+        });
+      }
+      
+      // Xử lý lỗi chung
       res.status(500).json({
         success: false,
-        message: 'Error starting scan'
+        message: 'Error starting scan',
+        error: error.message || 'Unknown error'
       });
     }
   },

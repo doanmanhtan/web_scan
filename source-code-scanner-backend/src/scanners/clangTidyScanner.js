@@ -1,8 +1,398 @@
+// // src/scanners/clangTidyScanner.js
+// const { exec } = require('child_process');
+// const path = require('path');
+// const fs = require('fs-extra');
+// const { logger } = require('../utils/logger');
+// const { scannerConfig } = require('../config/scanners');
+
+// /**
+//  * ClangTidy scanner implementation
+//  */
+// class ClangTidyScanner {
+//   constructor() {
+//     this.name = 'clangtidy';
+//     this.config = scannerConfig.clangTidy;
+//   }
+
+//   /**
+//    * Check if clang-tidy is installed and accessible
+//    * @returns {Promise<Boolean>} True if installed, false otherwise
+//    */
+//   async checkInstallation() {
+//     return new Promise((resolve) => {
+//       exec(`${this.config.path} --version`, (error) => {
+//         if (error) {
+//           logger.error(`ClangTidy installation check failed: ${error.message}`);
+//           resolve(false);
+//         } else {
+//           resolve(true);
+//         }
+//       });
+//     });
+//   }
+
+//   /**
+//    * Scan a directory with clang-tidy
+//    * @param {String} directory - Directory to scan
+//    * @param {String} outputPath - Path to store scan results
+//    * @param {Object} options - Scan options
+//    * @returns {Promise<Object>} Scan results
+//    */
+//   async scanDirectory(directory, outputPath, options = {}) {
+//     try {
+//       // Ensure output directory exists
+//       fs.ensureDirSync(path.dirname(outputPath));
+      
+//       // Find all C/C++ files in the directory
+//       const files = await this.findCppFiles(directory);
+      
+//       if (files.length === 0) {
+//         logger.warn(`No C/C++ files found in ${directory}`);
+//         return {
+//           scanner: this.name,
+//           vulnerabilities: [],
+//           summary: {
+//             total: 0,
+//             critical: 0,
+//             high: 0,
+//             medium: 0,
+//             low: 0
+//           }
+//         };
+//       }
+      
+//       // Create a compilation database if it doesn't exist
+//       const compileDbPath = path.join(directory, 'compile_commands.json');
+//       if (!fs.existsSync(compileDbPath)) {
+//         try {
+//           await this.createCompilationDatabase(directory, files);
+//         } catch (error) {
+//           logger.error(`Error creating compilation database: ${error.message}`);
+//           // Continue without compilation database
+//         }
+//       }
+      
+//       // Scan each file and collect results
+//       const results = [];
+      
+//       for (const file of files) {
+//         try {
+//           const fileResult = await this.scanFile(file, directory, options);
+//           if (Array.isArray(fileResult)) {
+//             results.push(...fileResult);
+//           }
+//         } catch (error) {
+//           logger.error(`Error scanning file ${file}: ${error.message}`);
+//           // Continue with next file
+//         }
+//       }
+      
+//       // Write results to output file
+//       try {
+//         fs.writeJsonSync(outputPath, { results }, { spaces: 2 });
+//       } catch (error) {
+//         logger.error(`Error writing results to file: ${error.message}`);
+//       }
+      
+//       logger.info(`ClangTidy scan completed successfully, found ${results.length} issues`);
+      
+//       return this.formatResults({ results }, directory);
+//     } catch (error) {
+//       logger.error(`ClangTidy scan error: ${error.message}`);
+//       return {
+//         scanner: this.name,
+//         vulnerabilities: [],
+//         summary: {
+//           total: 0,
+//           critical: 0,
+//           high: 0,
+//           medium: 0,
+//           low: 0
+//         },
+//         error: error.message
+//       };
+//     }
+//   }
+
+//   /**
+//    * Find all C/C++ files in a directory recursively
+//    * @param {String} directory - Directory to search
+//    * @returns {Promise<Array>} List of file paths
+//    */
+//   async findCppFiles(directory) {
+//     return new Promise((resolve, reject) => {
+//       exec(`find ${directory} -type f -name "*.c" -o -name "*.cpp" -o -name "*.cc" -o -name "*.h" -o -name "*.hpp"`, 
+//         { maxBuffer: 1024 * 1024 * 10 }, // 10MB buffer
+//         (error, stdout) => {
+//           if (error) {
+//             reject(error);
+//             return;
+//           }
+          
+//           const files = stdout.trim().split('\n').filter(Boolean);
+//           resolve(files);
+//         }
+//       );
+//     });
+//   }
+
+//   /**
+//    * Create a basic compilation database for clang-tidy
+//    * @param {String} directory - Base directory
+//    * @param {Array} files - List of files
+//    */
+//   async createCompilationDatabase(directory, files) {
+//     const compileDb = files.map(file => ({
+//       directory,
+//       file,
+//       command: `clang++ -std=c++11 -c ${file}`,
+//       output: `${path.basename(file, path.extname(file))}.o`
+//     }));
+    
+//     fs.writeJsonSync(path.join(directory, 'compile_commands.json'), compileDb, { spaces: 2 });
+//     logger.info(`Created compilation database at ${path.join(directory, 'compile_commands.json')}`);
+//   }
+
+//   /**
+//    * Scan a single file with clang-tidy
+//    * @param {String} filePath - File to scan
+//    * @param {String} baseDir - Base directory
+//    * @param {Object} options - Scan options
+//    * @returns {Promise<Array>} Scan results
+//    */
+//   scanFile(filePath, baseDir, options = {}) {
+//     return new Promise((resolve, reject) => {
+//       // Prepare arguments
+//       const args = [...this.config.defaultArgs];
+      
+//       // Add checks
+//       if (options.checks) {
+//         args.push(`-checks=${options.checks}`);
+//       } else {
+//         args.push('-checks=*,-clang-analyzer-*,-cppcoreguidelines-avoid-magic-numbers');
+//       }
+      
+//       // Add file to scan
+//       args.push(filePath);
+      
+//       // Construct command
+//       const command = `${this.config.path} ${args.join(' ')}`;
+      
+//       logger.debug(`Running clang-tidy on file: ${command}`);
+      
+//       // Execute command
+//       exec(command, {
+//         cwd: baseDir,
+//         maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+//         timeout: this.config.timeoutMs
+//       }, (error, stdout, stderr) => {
+//         // clang-tidy returns 1 if it finds issues, which is not an error
+//         if (error && error.code !== 1) {
+//           logger.error(`ClangTidy scan failed: ${stderr || error.message}`);
+//           reject(new Error(`ClangTidy scan failed: ${stderr || error.message}`));
+//           return;
+//         }
+        
+//         // Parse results
+//         const results = this.parseClangTidyOutput(stdout, filePath);
+//         resolve(results);
+//       });
+//     });
+//   }
+
+//   /**
+//    * Parse clang-tidy output
+//    * @param {String} output - Command output
+//    * @param {String} filePath - File path
+//    * @returns {Array} Parsed results
+//    */
+//   parseClangTidyOutput(output, filePath) {
+//     const results = [];
+//     const lines = output.split('\n');
+    
+//     // Regular expression to match clang-tidy diagnostic lines
+//     // Format: file:line:column: warning/error: message [check-name]
+//     const diagnosticRegex = /^([^:]+):(\d+):(\d+):\s+(warning|error):\s+(.+?)\s+\[([^\]]+)\]$/;
+    
+//     for (let i = 0; i < lines.length; i++) {
+//       const line = lines[i];
+//       const match = line.match(diagnosticRegex);
+      
+//       if (match) {
+//         const [, file, lineNum, column, level, message, checkName] = match;
+        
+//         // Get code snippet if available
+//         let codeSnippet = '';
+//         if (i + 1 < lines.length && !lines[i + 1].match(diagnosticRegex) && lines[i + 1].trim()) {
+//           codeSnippet = lines[i + 1].trim();
+//           // Check for the arrow line that points to the issue
+//           if (i + 2 < lines.length && lines[i + 2].includes('^')) {
+//             i += 2; // Skip both the code line and the arrow line
+//           } else {
+//             i += 1; // Skip just the code line
+//           }
+//         }
+        
+//         results.push({
+//           file,
+//           line: parseInt(lineNum, 10),
+//           column: parseInt(column, 10),
+//           level,
+//           message,
+//           checkName,
+//           codeSnippet
+//         });
+//       }
+//     }
+    
+//     return results;
+//   }
+
+//   /**
+//    * Format clang-tidy results to standard format
+//    * @param {Object} rawResults - Raw scan results
+//    * @param {String} basePath - Base path for relative file paths
+//    * @returns {Object} Formatted results
+//    */
+//   formatResults(rawResults, basePath) {
+//     if (!rawResults.results || !Array.isArray(rawResults.results)) {
+//       logger.warn('No valid results found in ClangTidy output');
+//       return {
+//         scanner: this.name,
+//         vulnerabilities: [],
+//         summary: {
+//           total: 0,
+//           critical: 0,
+//           high: 0,
+//           medium: 0,
+//           low: 0
+//         }
+//       };
+//     }
+    
+//     // Initialize counters
+//     const summary = {
+//       total: 0,
+//       critical: 0,
+//       high: 0,
+//       medium: 0,
+//       low: 0
+//     };
+    
+//     // Process results
+//     const vulnerabilities = rawResults.results.map(result => {
+//       // Map clang-tidy severity to our severity levels
+//       let severity;
+//       if (result.level === 'error') {
+//         severity = 'high';
+//         summary.high++;
+//       } else if (result.checkName.includes('security') || 
+//                 result.checkName.includes('safety')) {
+//         severity = 'medium';
+//         summary.medium++;
+//       } else {
+//         severity = 'low';
+//         summary.low++;
+//       }
+      
+//       summary.total++;
+      
+//       // Determine vulnerability type
+//       let type;
+//       if (result.checkName.includes('security')) {
+//         type = 'Security';
+//       } else if (result.checkName.includes('performance')) {
+//         type = 'Performance';
+//       } else if (result.checkName.includes('memory') || 
+//                 result.checkName.includes('leak') ||
+//                 result.checkName.includes('buffer')) {
+//         type = 'Memory Safety';
+//       } else if (result.checkName.includes('thread') || 
+//                 result.checkName.includes('concurrency')) {
+//         type = 'Concurrency';
+//       } else {
+//         type = 'Code Quality';
+//       }
+      
+//       // Relative file path
+//       const filePath = path.isAbsolute(result.file) 
+//         ? result.file 
+//         : path.join(basePath, result.file);
+      
+//       const relativePath = path.relative(basePath, filePath);
+      
+//       return {
+//         name: result.checkName.split('.').pop().replace(/-/g, ' '),
+//         severity,
+//         type,
+//         tool: this.name,
+//         file: {
+//           fileName: path.basename(filePath),
+//           filePath: relativePath,
+//           fileExt: path.extname(filePath)
+//         },
+//         location: {
+//           line: result.line,
+//           column: result.column
+//         },
+//         description: result.message || 'No description provided',
+//         codeSnippet: {
+//           line: result.codeSnippet || '',
+//           before: [],
+//           after: []
+//         },
+//         remediation: {
+//           description: this.getRemediationForCheck(result.checkName)
+//         },
+//         status: 'open'
+//       };
+//     });
+    
+//     return {
+//       scanner: this.name,
+//       vulnerabilities,
+//       summary
+//     };
+//   }
+
+//   /**
+//    * Get remediation advice for a specific check
+//    * @param {String} checkName - Name of the check
+//    * @returns {String} Remediation advice
+//    */
+//   getRemediationForCheck(checkName) {
+//     // Common remediations for clang-tidy checks
+//     const remediations = {
+//       'bugprone-use-after-move': 'Don\'t use objects after they have been moved. Initialize the variable after the move operation.',
+//       'bugprone-sizeof-expression': 'Check your sizeof expressions carefully. Make sure you\'re getting the size of the intended type.',
+//       'cppcoreguidelines-no-malloc': 'Use C++ memory management (new/delete) or smart pointers instead of malloc/free.',
+//       'cppcoreguidelines-owning-memory': 'Use RAII and smart pointers to manage resource ownership.',
+//       'clang-analyzer-security.insecureAPI': 'Use secure alternatives to the insecure API functions.',
+//       'clang-analyzer-deadcode': 'Remove or fix the dead code to improve maintainability.',
+//       'clang-analyzer-cplusplus.NewDelete': 'Ensure proper matching of new and delete operations to prevent memory leaks.',
+//       'clang-analyzer-unix.Malloc': 'Ensure proper malloc/free handling to prevent memory leaks.',
+//       'performance': 'Optimize the code according to the suggestions for better performance.',
+//       'readability': 'Improve code readability by following the suggested guidelines.'
+//     };
+    
+//     // Check for matches
+//     for (const [key, value] of Object.entries(remediations)) {
+//       if (checkName.includes(key)) {
+//         return value;
+//       }
+//     }
+    
+//     return 'Review the issue and fix according to C++ best practices.';
+//   }
+// }
+
+// module.exports = new ClangTidyScanner();
+
 // src/scanners/clangTidyScanner.js
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs-extra');
-const { logger } = require('../utils/logger');
+const logger = require('../utils/logger'); // Sửa import logger
 const { scannerConfig } = require('../config/scanners');
 
 /**
@@ -22,7 +412,7 @@ class ClangTidyScanner {
     return new Promise((resolve) => {
       exec(`${this.config.path} --version`, (error) => {
         if (error) {
-          logger.error(`ClangTidy installation check failed: ${error.message}`);
+          console.error(`ClangTidy installation check failed: ${error.message}`);
           resolve(false);
         } else {
           resolve(true);
@@ -47,7 +437,7 @@ class ClangTidyScanner {
       const files = await this.findCppFiles(directory);
       
       if (files.length === 0) {
-        logger.warn(`No C/C++ files found in ${directory}`);
+        console.warn(`No C/C++ files found in ${directory}`);
         return {
           scanner: this.name,
           vulnerabilities: [],
@@ -73,21 +463,37 @@ class ClangTidyScanner {
       for (const file of files) {
         try {
           const fileResult = await this.scanFile(file, directory, options);
-          results.push(...fileResult);
-        } catch (error) {
-          logger.error(`Error scanning file ${file}: ${error.message}`);
+          if (fileResult && Array.isArray(fileResult)) {
+            results.push(...fileResult);
+          }
+        } catch (scanError) {
+          logger.error(`Error scanning file ${file}: ${scanError.message}`);
+          // Continue with other files instead of failing completely
         }
       }
       
       // Write results to output file
-      fs.writeJsonSync(outputPath, { results }, { spaces: 2 });
+      const outputData = { results };
+      fs.writeJsonSync(outputPath, outputData, { spaces: 2 });
       
-      logger.info(`ClangTidy scan completed successfully, found ${results.length} issues`);
+      console.info(`ClangTidy scan completed successfully, found ${results.length} issues`);
       
-      return this.formatResults({ results }, directory);
-    } catch (error) {
-      logger.error(`ClangTidy scan error: ${error.message}`);
-      throw error;
+      return this.formatResults(outputData, directory);
+    } catch (mainError) {
+      console.error(`ClangTidy scan error: ${mainError.message}`);
+      // Return empty results instead of throwing
+      return {
+        scanner: this.name,
+        vulnerabilities: [],
+        summary: {
+          total: 0,
+          critical: 0,
+          high: 0,
+          medium: 0,
+          low: 0
+        },
+        error: mainError.message
+      };
     }
   }
 
@@ -97,19 +503,19 @@ class ClangTidyScanner {
    * @returns {Promise<Array>} List of file paths
    */
   async findCppFiles(directory) {
-    return new Promise((resolve, reject) => {
-      exec(`find ${directory} -type f -name "*.c" -o -name "*.cpp" -o -name "*.cc" -o -name "*.h" -o -name "*.hpp"`, 
-        { maxBuffer: 1024 * 1024 * 10 }, // 10MB buffer
-        (error, stdout) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          
-          const files = stdout.trim().split('\n').filter(Boolean);
-          resolve(files);
+    return new Promise((resolve) => {
+      const findCommand = `find "${directory}" -type f \\( -name "*.c" -o -name "*.cpp" -o -name "*.cc" -o -name "*.h" -o -name "*.hpp" \\)`;
+      
+      exec(findCommand, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
+        if (error) {
+          console.warn(`Error finding C/C++ files: ${error.message}`);
+          resolve([]);
+          return;
         }
-      );
+        
+        const files = stdout.trim().split('\n').filter(Boolean);
+        resolve(files);
+      });
     });
   }
 
@@ -119,15 +525,29 @@ class ClangTidyScanner {
    * @param {Array} files - List of files
    */
   async createCompilationDatabase(directory, files) {
-    const compileDb = files.map(file => ({
-      directory,
-      file,
-      command: `clang++ -std=c++11 -c ${file}`,
-      output: `${path.basename(file, path.extname(file))}.o`
-    }));
-    
-    fs.writeJsonSync(path.join(directory, 'compile_commands.json'), compileDb, { spaces: 2 });
-    logger.info(`Created compilation database at ${path.join(directory, 'compile_commands.json')}`);
+    try {
+      const compileDb = files.map(file => ({
+        directory: path.resolve(directory),
+        file: path.resolve(file),
+        command: `clang++ -std=c++11 -c "${file}"`,
+        output: `${path.basename(file, path.extname(file))}.o`
+      }));
+      
+      const compileDbPath = path.join(directory, 'compile_commands.json');
+      fs.writeJsonSync(compileDbPath, compileDb, { spaces: 2 });
+      
+      // Set proper permissions (without sudo)
+      exec(`chmod 644 "${compileDbPath}"`, (error) => {
+        if (error) {
+          console.warn(`Could not set permissions for compile_commands.json: ${error.message}`);
+        }
+      });
+      
+      console.info(`Created compilation database at ${compileDbPath}`);
+    } catch (dbError) {
+      console.error(`Error creating compilation database: ${dbError.message}`);
+      // Don't throw, just log the error
+    }
   }
 
   /**
@@ -138,24 +558,27 @@ class ClangTidyScanner {
    * @returns {Promise<Array>} Scan results
    */
   scanFile(filePath, baseDir, options = {}) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       // Prepare arguments
-      const args = [...this.config.defaultArgs];
+      const args = [];
       
       // Add checks
       if (options.checks) {
         args.push(`-checks=${options.checks}`);
       } else {
-        args.push('-checks=*,-clang-analyzer-*,-cppcoreguidelines-avoid-magic-numbers');
+        args.push('-checks=*,-clang-analyzer-*,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers');
       }
       
-      // Add file to scan
-      args.push(filePath);
+      // Add compilation database path
+      args.push('-p', baseDir);
       
-      // Construct command
+      // Add file to scan
+      args.push(`"${filePath}"`);
+      
+      // Construct command (without sudo)
       const command = `${this.config.path} ${args.join(' ')}`;
       
-      logger.debug(`Running clang-tidy on file: ${command}`);
+      console.debug(`Running clang-tidy on file: ${command}`);
       
       // Execute command
       exec(command, {
@@ -163,15 +586,21 @@ class ClangTidyScanner {
         maxBuffer: 1024 * 1024 * 10, // 10MB buffer
         timeout: this.config.timeoutMs
       }, (error, stdout, stderr) => {
-        if (error && error.code !== 1) { // clang-tidy returns 1 if it finds issues
-          logger.error(`ClangTidy scan failed: ${stderr}`);
-          reject(new Error(`ClangTidy scan failed: ${stderr}`));
+        // ClangTidy returns non-zero exit codes when it finds issues, which is normal
+        if (error && error.code > 2) { 
+          console.error(`ClangTidy scan failed for ${filePath}: ${stderr || error.message}`);
+          resolve([]);
           return;
         }
         
         // Parse results
-        const results = this.parseClangTidyOutput(stdout, filePath);
-        resolve(results);
+        try {
+          const results = this.parseClangTidyOutput(stdout, filePath);
+          resolve(results);
+        } catch (parseError) {
+          console.error(`Error parsing ClangTidy output for ${filePath}: ${parseError.message}`);
+          resolve([]);
+        }
       });
     });
   }
@@ -183,12 +612,15 @@ class ClangTidyScanner {
    * @returns {Array} Parsed results
    */
   parseClangTidyOutput(output, filePath) {
+    if (!output || typeof output !== 'string') {
+      return [];
+    }
+    
     const results = [];
     const lines = output.split('\n');
     
     // Regular expression to match clang-tidy diagnostic lines
-    // Format: file:line:column: warning/error: message [check-name]
-    const diagnosticRegex = /^([^:]+):(\d+):(\d+):\s+(warning|error):\s+(.+?)\s+\[([^\]]+)\]$/;
+    const diagnosticRegex = /^([^:]+):(\d+):(\d+):\s+(warning|error|note):\s+(.+?)\s+\[([^\]]+)\]$/;
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -196,6 +628,11 @@ class ClangTidyScanner {
       
       if (match) {
         const [, file, lineNum, column, level, message, checkName] = match;
+        
+        // Skip 'note' level messages as they are usually follow-ups
+        if (level === 'note') {
+          continue;
+        }
         
         // Get code snippet if available
         let codeSnippet = '';
@@ -210,13 +647,13 @@ class ClangTidyScanner {
         }
         
         results.push({
-          file,
+          file: file,
           line: parseInt(lineNum, 10),
           column: parseInt(column, 10),
-          level,
-          message,
-          checkName,
-          codeSnippet
+          level: level,
+          message: message,
+          checkName: checkName,
+          codeSnippet: codeSnippet
         });
       }
     }
@@ -231,8 +668,8 @@ class ClangTidyScanner {
    * @returns {Object} Formatted results
    */
   formatResults(rawResults, basePath) {
-    if (!rawResults.results || !Array.isArray(rawResults.results)) {
-      logger.warn('No valid results found in ClangTidy output');
+    if (!rawResults || !rawResults.results || !Array.isArray(rawResults.results)) {
+      console.warn('No valid results found in ClangTidy output');
       return {
         scanner: this.name,
         vulnerabilities: [],
@@ -262,8 +699,8 @@ class ClangTidyScanner {
       if (result.level === 'error') {
         severity = 'high';
         summary.high++;
-      } else if (result.checkName.includes('security') || 
-                result.checkName.includes('safety')) {
+      } else if (result.checkName && (result.checkName.includes('security') || 
+                result.checkName.includes('safety'))) {
         severity = 'medium';
         summary.medium++;
       } else {
@@ -275,16 +712,16 @@ class ClangTidyScanner {
       
       // Determine vulnerability type
       let type;
-      if (result.checkName.includes('security')) {
+      if (result.checkName && result.checkName.includes('security')) {
         type = 'Security';
-      } else if (result.checkName.includes('performance')) {
+      } else if (result.checkName && result.checkName.includes('performance')) {
         type = 'Performance';
-      } else if (result.checkName.includes('memory') || 
+      } else if (result.checkName && (result.checkName.includes('memory') || 
                 result.checkName.includes('leak') ||
-                result.checkName.includes('buffer')) {
+                result.checkName.includes('buffer'))) {
         type = 'Memory Safety';
-      } else if (result.checkName.includes('thread') || 
-                result.checkName.includes('concurrency')) {
+      } else if (result.checkName && (result.checkName.includes('thread') || 
+                result.checkName.includes('concurrency'))) {
         type = 'Concurrency';
       } else {
         type = 'Code Quality';
@@ -298,7 +735,7 @@ class ClangTidyScanner {
       const relativePath = path.relative(basePath, filePath);
       
       return {
-        name: result.checkName.split('.').pop().replace(/-/g, ' '),
+        name: (result.checkName || 'clang-tidy-issue').split('.').pop().replace(/-/g, ' '),
         severity,
         type,
         tool: this.name,
@@ -308,8 +745,8 @@ class ClangTidyScanner {
           fileExt: path.extname(filePath)
         },
         location: {
-          line: result.line,
-          column: result.column
+          line: result.line || 1,
+          column: result.column || 1
         },
         description: result.message || 'No description provided',
         codeSnippet: {
@@ -318,7 +755,7 @@ class ClangTidyScanner {
           after: []
         },
         remediation: {
-          description: this.getRemediationForCheck(result.checkName)
+          description: this.getRemediationForCheck(result.checkName || '')
         },
         status: 'open'
       };
@@ -337,6 +774,10 @@ class ClangTidyScanner {
    * @returns {String} Remediation advice
    */
   getRemediationForCheck(checkName) {
+    if (!checkName) {
+      return 'Review the issue and fix according to C++ best practices.';
+    }
+    
     // Common remediations for clang-tidy checks
     const remediations = {
       'bugprone-use-after-move': 'Don\'t use objects after they have been moved. Initialize the variable after the move operation.',

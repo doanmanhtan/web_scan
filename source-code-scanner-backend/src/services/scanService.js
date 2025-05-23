@@ -194,33 +194,44 @@ class ScanService {
         throw new Error(`Scan not found: ${scanId}`);
       }
       
+      // Kiểm tra trạng thái scan
       if (scan.status === 'in_progress') {
-        throw new Error(`Scan already in progress: ${scanId}`);
+        // Nếu scan đang chạy quá lâu (ví dụ: > 30 phút), reset trạng thái
+        const scanStartTime = new Date(scan.updatedAt);
+        const now = new Date();
+        const diffMinutes = (now - scanStartTime) / (1000 * 60);
+        
+        if (diffMinutes > 30) {
+          console.log(`Scan ${scanId} has been running for too long, resetting status`);
+          await scanRepository.updateScan(scanId, { status: 'pending' });
+        } else {
+          throw new Error(`Scan already in progress: ${scanId}`);
+        }
       }
       
       if (scan.status === 'completed') {
         throw new Error(`Scan already completed: ${scanId}`);
       }
       
-      // Update scan status
-      const startTime = new Date();
-      await scanRepository.updateScan(scanId, {
+      // Update scan status to in_progress
+      await scanRepository.updateScan(scanId, { 
         status: 'in_progress',
-        progress: 0,
-        startTime
+        startedAt: new Date()
       });
       
-      logger.info(`Starting scan: ${scanId}`);
-      
-      // Start scan process asynchronously
+      // Start scan process
       this.runScan(scanId).catch(error => {
-        logger.error(`Error running scan ${scanId}: ${error.message}`);
-        scanRepository.failScan(scanId, error);
+        console.error(`Error running scan ${scanId}:`, error);
+        // Update scan status to failed if there's an error
+        scanRepository.updateScan(scanId, { 
+          status: 'failed',
+          error: error.message
+        });
       });
       
-      return await scanRepository.getScanById(scanId);
+      return scan;
     } catch (error) {
-      logger.error(`Error starting scan: ${error.message}`);
+      console.error('Error in startScan:', error);
       throw error;
     }
   }
