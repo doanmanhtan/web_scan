@@ -457,42 +457,96 @@ class SemgrepScanner {
     
     // Process results
     const vulnerabilities = rawResults.results.map(result => {
-      // Map semgrep severity to our severity levels
+      // FIXED: Improved severity mapping for Semgrep
       let severity;
       const severityLevel = result.extra?.severity?.toLowerCase() || 'info';
       
+      // Map Semgrep severity levels more accurately
       switch (severityLevel) {
         case 'error':
-        case 'critical':
           severity = 'critical';
           summary.critical++;
           break;
         case 'warning':
-        case 'high':
           severity = 'high';
           summary.high++;
           break;
         case 'info':
+          severity = 'medium';
+          summary.medium++;
+          break;
+        case 'critical':
+          severity = 'critical';
+          summary.critical++;
+          break;
+        case 'high':
+          severity = 'high';
+          summary.high++;
+          break;
         case 'medium':
           severity = 'medium';
           summary.medium++;
           break;
-        default:
+        case 'low':
           severity = 'low';
           summary.low++;
+          break;
+        default:
+          // For unknown severities, check rule metadata or default to medium
+          if (result.extra?.metadata?.severity) {
+            const metaSeverity = result.extra.metadata.severity.toLowerCase();
+            switch (metaSeverity) {
+              case 'critical':
+              case 'error':
+                severity = 'critical';
+                summary.critical++;
+                break;
+              case 'high':
+              case 'warning':
+                severity = 'high';
+                summary.high++;
+                break;
+              case 'medium':
+              case 'info':
+                severity = 'medium';
+                summary.medium++;
+                break;
+              case 'low':
+                severity = 'low';
+                summary.low++;
+                break;
+              default:
+                severity = 'medium';
+                summary.medium++;
+            }
+          } else {
+            // Check rule ID for severity hints
+            const ruleId = result.check_id || '';
+            if (ruleId.includes('security') || ruleId.includes('cwe')) {
+              severity = 'high';
+              summary.high++;
+            } else if (ruleId.includes('performance') || ruleId.includes('maintainability')) {
+              severity = 'medium';
+              summary.medium++;
+            } else {
+              severity = 'medium';
+              summary.medium++;
+            }
+          }
       }
       
       summary.total++;
       
       // Determine vulnerability type
       let type;
-      if (result.check_id.includes('security') || (result.extra?.metadata?.cwe)) {
+      const ruleId = result.check_id || '';
+      if (ruleId.includes('security') || (result.extra?.metadata?.cwe)) {
         type = 'Security';
-      } else if (result.check_id.includes('performance')) {
+      } else if (ruleId.includes('performance')) {
         type = 'Performance';
-      } else if (result.check_id.includes('memory') || result.check_id.includes('leak')) {
+      } else if (ruleId.includes('memory') || ruleId.includes('leak')) {
         type = 'Memory Safety';
-      } else if (result.check_id.includes('concurrency') || result.check_id.includes('race')) {
+      } else if (ruleId.includes('concurrency') || ruleId.includes('race')) {
         type = 'Concurrency';
       } else {
         type = 'Code Quality';
@@ -535,6 +589,9 @@ class SemgrepScanner {
         status: 'open'
       };
     });
+    
+    // Log summary for debugging
+    console.log(`Semgrep Summary: Total=${summary.total}, Critical=${summary.critical}, High=${summary.high}, Medium=${summary.medium}, Low=${summary.low}`);
     
     return {
       scanner: this.name,

@@ -48,7 +48,7 @@ const scanController = {
     try {
       console.log('Files received:', req.files ? req.files.length : 'undefined');
       console.log('Request body:', req.body);
-      console.log('User info:', req.user);
+      // console.log('User info:', req.user);
       
       const scanData = req.body;
       const files = req.files;
@@ -472,6 +472,7 @@ const scanController = {
       });
     }
   }
+  
 };
 
 module.exports = scanController;
