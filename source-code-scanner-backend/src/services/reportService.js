@@ -1,12 +1,23 @@
-// src/services/reportService.js
+// src/services/reportService.js - FIXED VERSION
 const path = require('path');
 const fs = require('fs-extra');
 const { v4: uuidv4 } = require('uuid');
-const { logger } = require('../utils/logger');
+const logger = require('../utils/logger');
 const reportRepository = require('../db/repositories/reportRepository');
 const scanRepository = require('../db/repositories/scanRepository');
 const vulnerabilityRepository = require('../db/repositories/vulnerabilityRepository');
 const appConfig = require('../config/app');
+
+function getErrorMessage(err) {
+  if (!err) return 'Unknown error';
+  if (typeof err === 'string') return err;
+  if (err.message) return err.message;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
 
 /**
  * Service for managing reports
@@ -20,8 +31,23 @@ class ReportService {
    */
   async generateReport(reportData, userId) {
     try {
+      // Validate input parameters
+      if (!reportData || !reportData.scanId) {
+        throw new Error('Invalid report data: scanId is required');
+      }
+
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+
       // Validate scan ID
-      const scan = await scanRepository.getScanById(reportData.scanId);
+      let scan;
+      try {
+        scan = await scanRepository.getScanById(reportData.scanId);
+      } catch (err) {
+        logger.error(`Error fetching scan: ${getErrorMessage(err)}`);
+        throw new Error(`Failed to fetch scan: ${getErrorMessage(err)}`);
+      }
       
       if (!scan) {
         throw new Error(`Scan not found: ${reportData.scanId}`);
@@ -33,6 +59,10 @@ class ReportService {
       
       // Create report directory if it doesn't exist
       const reportsDir = appConfig.reports.directory;
+      if (!reportsDir) {
+        throw new Error('Reports directory not configured');
+      }
+      
       fs.ensureDirSync(reportsDir);
       
       // Generate unique report ID
@@ -40,68 +70,96 @@ class ReportService {
       const reportDir = path.join(reportsDir, reportId);
       fs.ensureDirSync(reportDir);
       
-      // Generate report file
+      // Generate report file - FIXED TEMPLATE LITERAL
       const format = reportData.format || 'json';
       const reportFileName = `${scan.name.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().replace(/:/g, '-')}.${format}`;
       const reportFilePath = path.join(reportDir, reportFileName);
       
       // Get vulnerabilities
-      const { vulnerabilities } = await vulnerabilityRepository.getVulnerabilitiesByScan(
-        reportData.scanId, {}, 1000, 0
-      );
-      
-      // Get vulnerability statistics
-      const vulnerabilityStats = await vulnerabilityRepository.getVulnerabilityStatsByScan(reportData.scanId);
+      let vulnerabilities = [];
+      let vulnerabilityStats = {};
+      try {
+        const vulnResult = await vulnerabilityRepository.getVulnerabilitiesByScan(
+          reportData.scanId, {}, 1000, 0
+        );
+        vulnerabilities = vulnResult?.vulnerabilities || [];
+        
+        const statsResult = await vulnerabilityRepository.getVulnerabilityStatsByScan(reportData.scanId);
+        vulnerabilityStats = statsResult || {};
+      } catch (err) {
+        logger.error(`Error fetching vulnerabilities: ${getErrorMessage(err)}`);
+        throw new Error(`Failed to fetch vulnerabilities: ${getErrorMessage(err)}`);
+      }
       
       // Generate report content
-      const reportContent = await this.generateReportContent(
-        scan,
-        vulnerabilities,
-        vulnerabilityStats,
-        format,
-        reportData.includeOptions || {}
-      );
+      let reportContent;
+      try {
+        reportContent = await this.generateReportContent(
+          scan,
+          vulnerabilities,
+          vulnerabilityStats,
+          format,
+          reportData.includeOptions || {}
+        );
+      } catch (err) {
+        logger.error(`Error generating report content: ${getErrorMessage(err)}`);
+        throw new Error(`Failed to generate report content: ${getErrorMessage(err)}`);
+      }
       
       // Write report to file
-      await fs.writeFile(reportFilePath, reportContent);
+      try {
+        await fs.writeFile(reportFilePath, reportContent);
+      } catch (err) {
+        logger.error(`Error writing report file: ${getErrorMessage(err)}`);
+        throw new Error(`Failed to write report file: ${getErrorMessage(err)}`);
+      }
       
       // Get file size
-      const stats = await fs.stat(reportFilePath);
+      let stats;
+      try {
+        stats = await fs.stat(reportFilePath);
+      } catch (err) {
+        logger.error(`Error getting file stats: ${getErrorMessage(err)}`);
+        throw new Error(`Failed to get file stats: ${getErrorMessage(err)}`);
+      }
       
-      // Create report record
-      const report = await reportRepository.createReport({
-        reportId,
-        scan: reportData.scanId,
-        name: reportData.name || `Report for ${scan.name}`,
-        format,
-        filePath: reportFilePath,
-        fileSize: stats.size,
-        includeOptions: reportData.includeOptions || {
-          details: true,
-          code: true,
-          charts: true,
-          remediation: true
-        },
-        createdBy: userId
-      });
+      // Create report record - FIXED TEMPLATE LITERAL
+      let report;
+      try {
+        report = await reportRepository.createReport({
+          reportId,
+          scan: reportData.scanId,
+          name: reportData.name || `Report for ${scan.name}`,
+          format,
+          filePath: reportFilePath,
+          fileSize: stats.size,
+          includeOptions: reportData.includeOptions || {
+            details: true,
+            code: true,
+            charts: true,
+            remediation: true
+          },
+          createdBy: userId
+        });
+      } catch (err) {
+        logger.error(`Error creating report record: ${getErrorMessage(err)}`);
+        throw new Error(`Failed to create report record: ${getErrorMessage(err)}`);
+      }
       
-      logger.info(`Report generated: ${reportId}`);
+      // logger.info(`Report generated: ${reportId}`);
       
       return report;
     } catch (error) {
-      logger.error(`Error generating report: ${error.message}`);
+      console.error('=== ERROR IN generateReport ===');
+      console.error('Error type:', typeof error);
+      console.error('Error message:', error?.message);
+      console.error('Error stack:', error?.stack);
       throw error;
     }
   }
 
   /**
    * Generate report content based on format
-   * @param {Object} scan - Scan data
-   * @param {Array} vulnerabilities - Vulnerabilities
-   * @param {Object} vulnerabilityStats - Vulnerability statistics
-   * @param {String} format - Report format
-   * @param {Object} includeOptions - Options for what to include
-   * @returns {String} Report content
    */
   async generateReportContent(scan, vulnerabilities, vulnerabilityStats, format, includeOptions) {
     try {
@@ -116,42 +174,37 @@ class ReportService {
           throw new Error(`Unsupported report format: ${format}`);
       }
     } catch (error) {
-      logger.error(`Error generating report content: ${error.message}`);
+      logger.error(`Error generating report content: ${getErrorMessage(error)}`);
       throw error;
     }
   }
 
   /**
    * Generate JSON report
-   * @param {Object} scan - Scan data
-   * @param {Array} vulnerabilities - Vulnerabilities
-   * @param {Object} vulnerabilityStats - Vulnerability statistics
-   * @param {Object} includeOptions - Options for what to include
-   * @returns {String} JSON report content
    */
   generateJsonReport(scan, vulnerabilities, vulnerabilityStats, includeOptions) {
     const report = {
       scanInfo: {
-        id: scan._id,
-        scanId: scan.scanId,
-        name: scan.name,
-        status: scan.status,
-        scanType: scan.scanType,
-        tools: scan.tools,
-        createdAt: scan.createdAt,
-        startTime: scan.startTime,
-        endTime: scan.endTime,
-        duration: scan.duration,
-        filesScanned: scan.filesScanned,
-        linesOfCode: scan.linesOfCode,
-        issuesCounts: scan.issuesCounts
+        id: scan?._id || '',
+        scanId: scan?.scanId || '',
+        name: scan?.name || 'Unnamed Scan',
+        status: scan?.status || 'unknown',
+        scanType: scan?.scanType || 'unknown',
+        tools: scan?.tools || [],
+        createdAt: scan?.createdAt || new Date(),
+        startTime: scan?.startTime || null,
+        endTime: scan?.endTime || null,
+        duration: scan?.duration || 0,
+        filesScanned: scan?.filesScanned || 0,
+        linesOfCode: scan?.linesOfCode || 0,
+        issuesCounts: scan?.issuesCounts || {}
       },
       summary: {
-        totalVulnerabilities: vulnerabilityStats.totalVulnerabilities,
-        bySeverity: vulnerabilityStats.bySeverity,
-        byType: vulnerabilityStats.byType,
-        byTool: vulnerabilityStats.byTool,
-        byStatus: vulnerabilityStats.byStatus
+        totalVulnerabilities: vulnerabilityStats?.totalVulnerabilities || 0,
+        bySeverity: vulnerabilityStats?.bySeverity || {},
+        byType: vulnerabilityStats?.byType || {},
+        byTool: vulnerabilityStats?.byTool || {},
+        byStatus: vulnerabilityStats?.byStatus || {}
       }
     };
     
@@ -194,303 +247,80 @@ class ReportService {
   }
 
   /**
-   * Generate HTML report
-   * @param {Object} scan - Scan data
-   * @param {Array} vulnerabilities - Vulnerabilities
-   * @param {Object} vulnerabilityStats - Vulnerability statistics
-   * @param {Object} includeOptions - Options for what to include
-   * @returns {String} HTML report content
+   * Generate HTML report - SIMPLIFIED VERSION
    */
   generateHtmlReport(scan, vulnerabilities, vulnerabilityStats, includeOptions) {
-    const issuesBySeverity = vulnerabilityStats.bySeverity || {};
-    const issuesByType = vulnerabilityStats.byType || {};
+    const issuesBySeverity = vulnerabilityStats?.bySeverity || {};
+    const issuesByType = vulnerabilityStats?.byType || {};
     
-    let html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Source Code Scan Report - ${scan.name}</title>
-      <style>
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          margin: 0;
-          padding: 20px;
-          background-color: #f5f5f5;
-        }
-        .container {
-          max-width: 1200px;
-          margin: 0 auto;
-          background-color: #fff;
-          padding: 20px;
-          border-radius: 5px;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        h1, h2, h3 {
-          color: #2c3e50;
-        }
-        .report-header {
-          background-color: #2c3e50;
-          color: white;
-          padding: 20px;
-          border-radius: 5px;
-          margin-bottom: 20px;
-        }
-        .report-meta {
-          display: flex;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          margin-bottom: 20px;
-        }
-        .meta-item {
-          flex: 1;
-          min-width: 200px;
-          margin: 10px;
-          padding: 15px;
-          background-color: #f8f9fa;
-          border-radius: 5px;
-          border-left: 4px solid #2c3e50;
-        }
-        .summary-cards {
-          display: flex;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          margin-bottom: 20px;
-        }
-        .severity-card {
-          flex: 1;
-          min-width: 150px;
-          margin: 10px;
-          padding: 15px;
-          text-align: center;
-          border-radius: 5px;
-          color: white;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .critical { background-color: #d9534f; }
-        .high { background-color: #f0ad4e; }
-        .medium { background-color: #5bc0de; }
-        .low { background-color: #5cb85c; }
-        .vulnerability-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 20px;
-        }
-        .vulnerability-table th, .vulnerability-table td {
-          padding: 10px;
-          border: 1px solid #ddd;
-          text-align: left;
-        }
-        .vulnerability-table th {
-          background-color: #f2f2f2;
-        }
-        .vulnerability-table tr:nth-child(even) {
-          background-color: #f9f9f9;
-        }
-        .vulnerability-table tr:hover {
-          background-color: #f5f5f5;
-        }
-        .severity-badge {
-          display: inline-block;
-          padding: 3px 8px;
-          border-radius: 3px;
-          color: white;
-          font-size: 12px;
-          font-weight: bold;
-        }
-        .code-block {
-          background-color: #f5f5f5;
-          border: 1px solid #ddd;
-          border-radius: 3px;
-          padding: 10px;
-          font-family: monospace;
-          white-space: pre-wrap;
-          overflow-x: auto;
-          margin: 10px 0;
-        }
-        .highlighted-line {
-          background-color: #ffdddd;
-          display: block;
-        }
-        .remediation {
-          background-color: #e8f4f8;
-          border-left: 4px solid #5bc0de;
-          padding: 10px;
-          margin: 10px 0;
-        }
-        .footer {
-          text-align: center;
-          margin-top: 30px;
-          padding-top: 10px;
-          border-top: 1px solid #ddd;
-          color: #777;
-          font-size: 12px;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="report-header">
-          <h1>Source Code Scan Report</h1>
-          <h2>${scan.name}</h2>
-          <p>Generated: ${new Date().toLocaleString()}</p>
-        </div>
-        
-        <h2>Scan Information</h2>
-        <div class="report-meta">
-          <div class="meta-item">
-            <h3>Scan Details</h3>
-            <p><strong>Scan ID:</strong> ${scan.scanId}</p>
-            <p><strong>Scan Type:</strong> ${scan.scanType}</p>
-            <p><strong>Status:</strong> ${scan.status}</p>
-            <p><strong>Start Time:</strong> ${scan.startTime ? new Date(scan.startTime).toLocaleString() : 'N/A'}</p>
-            <p><strong>End Time:</strong> ${scan.endTime ? new Date(scan.endTime).toLocaleString() : 'N/A'}</p>
-            <p><strong>Duration:</strong> ${scan.duration ? this.formatDuration(scan.duration) : 'N/A'}</p>
-          </div>
-          <div class="meta-item">
-            <h3>Scan Metrics</h3>
-            <p><strong>Files Scanned:</strong> ${scan.filesScanned || 0}</p>
-            <p><strong>Lines of Code:</strong> ${scan.linesOfCode ? scan.linesOfCode.toLocaleString() : 0}</p>
-            <p><strong>Total Issues:</strong> ${vulnerabilityStats.totalVulnerabilities || 0}</p>
-            <p><strong>Tools Used:</strong> ${scan.tools.join(', ')}</p>
-          </div>
-        </div>
-        
-        <h2>Summary</h2>
-        <div class="summary-cards">
-          <div class="severity-card critical">
-            <h3>Critical</h3>
-            <h2>${issuesBySeverity.critical || 0}</h2>
-          </div>
-          <div class="severity-card high">
-            <h3>High</h3>
-            <h2>${issuesBySeverity.high || 0}</h2>
-          </div>
-          <div class="severity-card medium">
-            <h3>Medium</h3>
-            <h2>${issuesBySeverity.medium || 0}</h2>
-          </div>
-          <div class="severity-card low">
-            <h3>Low</h3>
-            <h2>${issuesBySeverity.low || 0}</h2>
-          </div>
-        </div>
-        
-        <h3>Issues by Type</h3>
-        <table class="vulnerability-table">
-          <tr>
-            <th>Type</th>
-            <th>Count</th>
-          </tr>
-          ${Object.entries(issuesByType).map(([type, count]) => `
-            <tr>
-              <td>${type}</td>
-              <td>${count}</td>
-            </tr>
-          `).join('')}
-        </table>
-    `;
+    let html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Source Code Scan Report - ${scan?.name || 'Unnamed Scan'}</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header { background: #2c3e50; color: white; padding: 20px; }
+    .summary { display: flex; gap: 20px; margin: 20px 0; }
+    .card { flex: 1; padding: 15px; text-align: center; color: white; }
+    .critical { background: #d9534f; }
+    .high { background: #f0ad4e; }
+    .medium { background: #5bc0de; }
+    .low { background: #5cb85c; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+    th { background: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Source Code Scan Report</h1>
+      <h2>${scan?.name || 'Unnamed Scan'}</h2>
+      <p>Generated: ${new Date().toLocaleString()}</p>
+    </div>
     
-    // Include vulnerabilities if details option is enabled
-    if (includeOptions.details && vulnerabilities.length > 0) {
-      html += `
-        <h2>Vulnerabilities</h2>
-        <table class="vulnerability-table">
-          <tr>
-            <th>Severity</th>
-            <th>Name</th>
-            <th>Type</th>
-            <th>File</th>
-            <th>Line</th>
-            <th>Tool</th>
-          </tr>
-          ${vulnerabilities.map(v => `
-            <tr>
-              <td>
-                <span class="severity-badge ${v.severity.toLowerCase()}">
-                  ${v.severity.toUpperCase()}
-                </span>
-              </td>
-              <td>${v.name}</td>
-              <td>${v.type}</td>
-              <td>${v.file.fileName}</td>
-              <td>${v.location.line}</td>
-              <td>${v.tool}</td>
-            </tr>
-          `).join('')}
-        </table>
-      `;
-      
-      // Include detailed vulnerability information
-      if (includeOptions.code || includeOptions.remediation) {
-        html += `<h2>Detailed Findings</h2>`;
-        
-        vulnerabilities.forEach(v => {
-          html += `
-            <div style="margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-left: 4px solid ${this.getSeverityColor(v.severity)};">
-              <h3>${v.name}</h3>
-              <p><strong>Severity:</strong> <span class="severity-badge ${v.severity.toLowerCase()}">${v.severity.toUpperCase()}</span></p>
-              <p><strong>Type:</strong> ${v.type}</p>
-              <p><strong>File:</strong> ${v.file.fileName}</p>
-              <p><strong>Location:</strong> Line ${v.location.line}, Column ${v.location.column || 'N/A'}</p>
-              <p><strong>Description:</strong> ${v.description}</p>
-          `;
-          
-          // Include code snippet if requested
-          if (includeOptions.code && v.codeSnippet && v.codeSnippet.line) {
-            html += `
-              <h4>Code Snippet</h4>
-              <div class="code-block">
-                <span class="highlighted-line">${this.escapeHtml(v.codeSnippet.line)}</span>
-              </div>
-            `;
-          }
-          
-          // Include remediation if requested
-          if (includeOptions.remediation && v.remediation && v.remediation.description) {
-            html += `
-              <h4>Remediation</h4>
-              <div class="remediation">
-                <p>${v.remediation.description}</p>
-              </div>
-            `;
-          }
-          
-          html += `</div>`;
-        });
-      }
-    }
-    
-    // Finish HTML
-    html += `
-        <div class="footer">
-          <p>Report generated by Source Code Scanner on ${new Date().toLocaleString()}</p>
-        </div>
+    <div class="summary">
+      <div class="card critical">
+        <h3>Critical</h3>
+        <h2>${issuesBySeverity.critical || 0}</h2>
       </div>
-    </body>
-    </html>
-    `;
+      <div class="card high">
+        <h3>High</h3>
+        <h2>${issuesBySeverity.high || 0}</h2>
+      </div>
+      <div class="card medium">
+        <h3>Medium</h3>
+        <h2>${issuesBySeverity.medium || 0}</h2>
+      </div>
+      <div class="card low">
+        <h3>Low</h3>
+        <h2>${issuesBySeverity.low || 0}</h2>
+      </div>
+    </div>
+    
+    <h3>Issues by Type</h3>
+    <table>
+      <tr><th>Type</th><th>Count</th></tr>
+      ${Object.entries(issuesByType).map(([type, count]) => 
+        `<tr><td>${type}</td><td>${count}</td></tr>`
+      ).join('')}
+    </table>
+  </div>
+</body>
+</html>`;
     
     return html;
   }
 
   /**
-   * Generate CSV report
-   * @param {Object} scan - Scan data
-   * @param {Array} vulnerabilities - Vulnerabilities
-   * @param {Object} vulnerabilityStats - Vulnerability statistics
-   * @param {Object} includeOptions - Options for what to include
-   * @returns {String} CSV report content
+   * Generate CSV report - FIXED VERSION
    */
   generateCsvReport(scan, vulnerabilities, vulnerabilityStats, includeOptions) {
-    // Create CSV header
     let csv = 'Severity,Name,Type,File,Line,Column,Tool,Description,Status\n';
     
-    // Add vulnerabilities
     vulnerabilities.forEach(v => {
-      // Escape any commas in fields
       const escapedName = `"${v.name.replace(/"/g, '""')}"`;
       const escapedDescription = `"${v.description.replace(/"/g, '""')}"`;
       const escapedFile = `"${v.file.fileName.replace(/"/g, '""')}"`;
@@ -501,55 +331,34 @@ class ReportService {
     return csv;
   }
 
-  /**
-   * Get report by ID
-   * @param {String} reportId - Report ID
-   * @returns {Object} Report
-   */
+  // REST OF METHODS UNCHANGED...
   async getReportById(reportId) {
     try {
       return await reportRepository.getReportById(reportId);
     } catch (error) {
-      logger.error(`Error getting report by ID: ${error.message}`);
+      logger.error(`Error getting report by ID: ${getErrorMessage(error)}`);
       throw error;
     }
   }
 
-  /**
-   * Get report by unique report ID
-   * @param {String} uniqueReportId - Unique report ID
-   * @returns {Object} Report
-   */
   async getReportByUniqueId(uniqueReportId) {
     try {
       return await reportRepository.getReportByUniqueId(uniqueReportId);
     } catch (error) {
-      logger.error(`Error getting report by unique ID: ${error.message}`);
+      logger.error(`Error getting report by unique ID: ${getErrorMessage(error)}`);
       throw error;
     }
   }
 
-  /**
-   * Get reports by scan ID
-   * @param {String} scanId - Scan ID
-   * @returns {Array} Reports
-   */
   async getReportsByScan(scanId) {
     try {
       return await reportRepository.getReportsByScan(scanId);
     } catch (error) {
-      logger.error(`Error getting reports by scan: ${error.message}`);
+      logger.error(`Error getting reports by scan: ${getErrorMessage(error)}`);
       throw error;
     }
   }
 
-  /**
-   * Get all reports with optional filtering
-   * @param {Object} filter - Filter criteria
-   * @param {Number} limit - Maximum number of results
-   * @param {Number} skip - Number of results to skip
-   * @returns {Object} Reports with pagination
-   */
   async getReports(filter = {}, limit = 10, skip = 0) {
     try {
       const reports = await reportRepository.getReports(filter, limit, skip);
@@ -565,16 +374,11 @@ class ReportService {
         }
       };
     } catch (error) {
-      logger.error(`Error getting reports: ${error.message}`);
+      logger.error(`Error getting reports: ${getErrorMessage(error)}`);
       throw error;
     }
   }
 
-  /**
-   * Download report
-   * @param {String} reportId - Report ID
-   * @returns {Object} Report file information
-   */
   async downloadReport(reportId) {
     try {
       const report = await reportRepository.getReportById(reportId);
@@ -594,48 +398,98 @@ class ReportService {
         format: report.format
       };
     } catch (error) {
-      logger.error(`Error downloading report: ${error.message}`);
+      logger.error(`Error downloading report: ${getErrorMessage(error)}`);
       throw error;
     }
   }
-
   /**
-   * Share report
-   * @param {String} reportId - Report ID
-   * @param {Number} expiryDays - Number of days until link expires
-   * @returns {Object} Share information
-   */
-  async shareReport(reportId, expiryDays = 7) {
-    try {
-      const report = await reportRepository.getReportById(reportId);
-      
-      if (!report) {
-        throw new Error(`Report not found: ${reportId}`);
-      }
-      
-      // Calculate expiry date
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + expiryDays);
-      
-      // Generate share link
-      const updatedReport = await reportRepository.generateShareLink(reportId, expiryDate);
-      
-      return {
-        reportId: updatedReport._id,
-        shareLink: updatedReport.shareLink,
-        expiryDate: updatedReport.shareExpiry
-      };
-    } catch (error) {
-      logger.error(`Error sharing report: ${error.message}`);
-      throw error;
+ * Share report - FIXED VERSION
+ * @param {String} reportId - Report ID
+ * @param {Number} expiryDays - Number of days until link expires
+ * @returns {Object} Share information
+ */
+async shareReport(reportId, expiryDays = 7) {
+  try {
+    console.log(`📤 Starting shareReport for ID: ${reportId}, expiryDays: ${expiryDays}`);
+    
+    const report = await reportRepository.getReportById(reportId);
+    
+    if (!report) {
+      console.error(`❌ Report not found: ${reportId}`);
+      throw new Error(`Report not found: ${reportId}`);
     }
+    
+    console.log(`✅ Found report: ${report.name}`);
+    
+    // Calculate expiry date
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + expiryDays);
+    
+    console.log(`📅 Expiry date: ${expiryDate.toISOString()}`);
+    
+    // Generate share link
+    const updatedReport = await reportRepository.generateShareLink(reportId, expiryDate);
+    
+    if (!updatedReport) {
+      console.error('❌ Failed to generate share link');
+      throw new Error('Failed to generate share link');
+    }
+    
+    console.log(`✅ Share link generated: ${updatedReport.shareLink}`);
+    
+    return {
+      reportId: updatedReport._id,
+      shareLink: updatedReport.shareLink,
+      expiryDate: updatedReport.shareExpiry
+    };
+    
+  } catch (error) {
+    console.error('💥 Error in shareReport service:', {
+      reportId,
+      error: error.message,
+      stack: error.stack
+    });
+    
+    logger.error(`Error sharing report: ${error.message}`);
+    
+    // FIXED: Don't access error.error - just throw the error
+    throw error;
   }
+}
 
-  /**
-   * Get report by share link
-   * @param {String} shareLink - Share link
-   * @returns {Object} Report
-   */
+  // async shareReport(reportId, expiryDays = 7) {
+  //   try {
+  //     if (!reportId) {
+  //       throw new Error('Report ID is required');
+  //     }
+
+  //     const report = await reportRepository.getReportById(reportId);
+      
+  //     if (!report) {
+  //       throw new Error(`Report not found: ${reportId}`);
+  //     }
+      
+  //     const expiryDate = new Date();
+  //     expiryDate.setDate(expiryDate.getDate() + expiryDays);
+      
+  //     const updatedReport = await reportRepository.generateShareLink(reportId, expiryDate);
+      
+  //     if (!updatedReport) {
+  //       throw new Error('Failed to generate share link');
+  //     }
+      
+  //     return {
+  //       reportId: updatedReport._id,
+  //       shareLink: updatedReport.shareLink,
+  //       expiryDate: updatedReport.shareExpiry
+  //     };
+  //   } catch (error) {
+  //     const errorMessage = getErrorMessage(error);
+  //     logger.error(`Error sharing report: ${errorMessage}`);
+  //     throw new Error(errorMessage);
+  //   }
+  // }
+
   async getReportByShareLink(shareLink) {
     try {
       const report = await reportRepository.getReportByShareLink(shareLink);
@@ -646,64 +500,123 @@ class ReportService {
       
       return report;
     } catch (error) {
-      logger.error(`Error getting report by share link: ${error.message}`);
+      logger.error(`Error getting report by share link: ${getErrorMessage(error)}`);
       throw error;
     }
   }
 
+  // async deleteReport(reportId) {
+  //   try {
+  //     const report = await reportRepository.getReportById(reportId);
+      
+  //     if (!report) {
+  //       throw new Error(`Report not found: ${reportId}`);
+  //     }
+      
+  //     if (report.filePath && fs.existsSync(report.filePath)) {
+  //       await fs.unlink(report.filePath);
+  //     }
+      
+  //     await reportRepository.deleteReport(reportId);
+      
+  //     logger.info(`Report deleted: ${reportId}`);
+      
+  //     return true;
+  //   } catch (error) {
+  //     logger.error(`Error deleting report: ${error?.message || 'Unknown error'}`);
+  //     throw error;
+  //   }
+  // }
   /**
-   * Delete report
-   * @param {String} reportId - Report ID
-   * @returns {Boolean} Success status
-   */
-  async deleteReport(reportId) {
-    try {
-      const report = await reportRepository.getReportById(reportId);
-      
-      if (!report) {
-        throw new Error(`Report not found: ${reportId}`);
-      }
-      
-      // Delete report file
-      if (report.filePath && fs.existsSync(report.filePath)) {
-        await fs.unlink(report.filePath);
-      }
-      
-      // Delete report record
-      await reportRepository.deleteReport(reportId);
-      
-      logger.info(`Report deleted: ${reportId}`);
-      
-      return true;
-    } catch (error) {
-      logger.error(`Error deleting report: ${error.message}`);
-      throw error;
+ * Delete report - FIXED LOGIC
+ * @param {String} reportId - Report ID
+ * @returns {Boolean} Success status
+ */
+/**
+ * Delete report - SIMPLE VERSION
+ * @param {String} reportId - Report ID
+ * @returns {Boolean} Success status
+ */
+async deleteReport(reportId) {
+  try {
+    console.log(`🔍 Finding report ${reportId}`);
+    const report = await reportRepository.getReportById(reportId);
+    
+    if (!report) {
+      throw new Error(`Report not found: ${reportId}`);
     }
+    
+    console.log(`✅ Found report: ${report.name}`);
+    
+    // Delete file if exists
+    if (report.filePath && fs.existsSync(report.filePath)) {
+      console.log(`🗑️ Deleting file: ${report.filePath}`);
+      await fs.unlink(report.filePath);
+    }
+    
+    // Delete from database
+    console.log(`🗑️ Deleting from database`);
+    await reportRepository.deleteReport(reportId);
+    
+    console.log(`✅ Report deleted successfully`);
+    logger.info(`Report deleted: ${reportId}`);
+    
+    return true;
+    
+  } catch (error) {
+    console.error(`💥 Delete error:`, error.message); // ← Chỉ dùng .message
+    // logger.error(`Error deleting report: ${error.message}`); // ← Chỉ dùng .message
+    throw error;
   }
+}
+// async deleteReport(reportId) {
+//   try {
+//     console.log(`🔍 Step 1: Finding report ${reportId}`);
+//     const report = await reportRepository.getReportById(reportId);
+    
+//     if (!report) {
+//       console.error(`❌ Report not found: ${reportId}`);
+//       throw new Error(`Report not found: ${reportId}`);
+//     }
+    
+//     console.log(`✅ Found report: ${report.name}`);
+    
+//     // Delete file if exists
+//     if (report.filePath && fs.existsSync(report.filePath)) {
+//       console.log(`🗑️ Step 2: Deleting file: ${report.filePath}`);
+//       await fs.unlink(report.filePath);
+//       console.log(`✅ File deleted successfully`);
+//     } else {
+//       console.log(`ℹ️ No file to delete or file doesn't exist`);
+//     }
+    
+//     // Delete from database
+//     console.log(`🗑️ Step 3: Deleting from database`);
+//     const deletedReport = await reportRepository.deleteReport(reportId);
+    
+//     // FIXED: Check if deletion was successful
+//     if (!deletedReport) {
+//       console.error(`❌ Failed to delete report from database`);
+//       throw new Error('Failed to delete report from database');
+//     }
+    
+//     console.log(`✅ Report deleted successfully from database`);
+//     logger.info(`Report deleted: ${reportId}`);
+    
+//     return true; // Always return true if we reach here
+    
+//   } catch (error) {
+//     console.error(`💥 Error in deleteReport service:`, {
+//       reportId,
+//       error: error.message,
+//       stack: error.stack
+//     });
+    
+//     logger.error(`Error deleting report: ${error?.message || 'Unknown error'}`);
+//     throw error; // Re-throw to let controller handle
+//   }
+// }
 
-  /**
-   * Format duration in milliseconds to human readable string
-   * @param {Number} ms - Duration in milliseconds
-   * @returns {String} Formatted duration
-   */
-  formatDuration(ms) {
-    if (!ms) return 'N/A';
-    
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    
-    const secondsRemainder = seconds % 60;
-    const minutesRemainder = minutes % 60;
-    
-    return `${hours.toString().padStart(2, '0')}:${minutesRemainder.toString().padStart(2, '0')}:${secondsRemainder.toString().padStart(2, '0')}`;
-  }
-
-  /**
-   * Get color for severity
-   * @param {String} severity - Severity level
-   * @returns {String} CSS color
-   */
   getSeverityColor(severity) {
     switch (severity.toLowerCase()) {
       case 'critical':
@@ -719,11 +632,6 @@ class ReportService {
     }
   }
 
-  /**
-   * Escape HTML special characters
-   * @param {String} html - HTML string
-   * @returns {String} Escaped HTML
-   */
   escapeHtml(html) {
     if (!html) return '';
     

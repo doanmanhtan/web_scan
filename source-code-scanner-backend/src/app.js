@@ -16,6 +16,7 @@ const scanRoutes = require('./api/routes/scanRoutes');
 const reportRoutes = require('./api/routes/reportRoutes');
 const userRoutes = require('./api/routes/userRoutes');
 const settingsRoutes = require('./api/routes/settingsRoutes');
+const vulnerabilityRoutes = require('./api/routes/vulnerabilityRoutes'); // ← THÊM DÒNG NÀY
 
 // Initialize express app
 const app = express();
@@ -51,6 +52,9 @@ app.use(`${API_PREFIX}/scans`, scanRoutes);
 app.use(`${API_PREFIX}/reports`, reportRoutes);
 app.use(`${API_PREFIX}/users`, userRoutes);
 app.use(`${API_PREFIX}/settings`, settingsRoutes);
+app.use(`${API_PREFIX}/vulnerabilities`, vulnerabilityRoutes); // ← THÊM DÒNG NÀY
+
+
 
 //tes
 const testRoutes = require('./api/routes/testRoutes');
