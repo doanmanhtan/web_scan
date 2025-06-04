@@ -1291,102 +1291,6 @@ class ScanService {
     }
   }
 
-  // /**
-  //  * Get validated scanners for the selected tools
-  //  * @param {Array} tools - Selected tools
-  //  * @returns {Array} Array of validated scanner objects
-  //  */
-  // async getValidatedScanners(tools) {
-  //   const scanners = [];
-  //   const invalidTools = [];
-    
-  //   for (const tool of tools) {
-  //     try {
-  //       const scanner = scannerFactory.createScanner(tool);
-        
-  //       // Check if scanner is properly installed
-  //       const isInstalled = await scanner.checkInstallation();
-  //       if (isInstalled) {
-  //         scanners.push({ scanner, tool });
-  //         console.log(`✅ ${tool} scanner is ready`);
-  //       } else {
-  //         console.warn(`❌ ${tool} scanner is not properly installed, skipping`);
-  //         invalidTools.push(tool);
-  //       }
-  //     } catch (error) {
-  //       console.error(`❌ Error initializing ${tool} scanner:`, error.message);
-  //       invalidTools.push(tool);
-  //     }
-  //   }
-    
-  //   if (invalidTools.length > 0) {
-  //     console.warn(`Invalid/unavailable tools: ${invalidTools.join(', ')}`);
-  //   }
-    
-  //   return scanners;
-  // }
-
-  // /**
-  //  * Run all scanners sequentially
-  //  * @param {Array} scanners - Array of scanner objects
-  //  * @param {String} uploadDir - Upload directory
-  //  * @param {String} resultsDir - Results directory
-  //  * @param {String} scanId - Scan ID for progress updates
-  //  * @returns {Array} Array of scan results
-  //  */
-  // async runAllScanners(scanners, uploadDir, resultsDir, scanId) {
-  //   const scanResults = [];
-  //   let completedScanners = 0;
-    
-  //   // Process scanners sequentially to avoid resource conflicts
-  //   for (const { scanner, tool } of scanners) {
-  //     try {
-  //       console.log(`\n🔍 === Starting ${tool} scan ===`);
-  //       const startTime = Date.now();
-        
-  //       const outputPath = path.join(resultsDir, `${scanner.name}-results.json`);
-  //       const scannerResult = await this.runScannerWithTimeout(scanner, uploadDir, outputPath, tool);
-        
-  //       const duration = Date.now() - startTime;
-  //       console.log(`⏱️ ${tool} scan completed in ${(duration/1000).toFixed(2)}s`);
-  //       console.log(`🎯 ${tool} found ${scannerResult.vulnerabilities?.length || 0} issues`);
-        
-  //       scanResults.push(scannerResult);
-        
-  //       // Update progress (20% + 60% for scanning)
-  //       completedScanners++;
-  //       const progressIncrement = 60 / scanners.length;
-  //       const newProgress = 20 + (progressIncrement * completedScanners);
-  //       await this.updateScanProgress(scanId, newProgress);
-        
-  //     } catch (scannerError) {
-  //       console.error(`❌ Error running ${tool} scanner:`, scannerError.message);
-        
-  //       // Add empty result for failed scanner
-  //       scanResults.push({
-  //         scanner: tool,
-  //         vulnerabilities: [],
-  //         summary: {
-  //           total: 0,
-  //           critical: 0,
-  //           high: 0,
-  //           medium: 0,
-  //           low: 0
-  //         },
-  //         error: scannerError.message
-  //       });
-        
-  //       // Still update progress
-  //       completedScanners++;
-  //       const progressIncrement = 60 / scanners.length;
-  //       const newProgress = 20 + (progressIncrement * completedScanners);
-  //       await this.updateScanProgress(scanId, newProgress);
-  //     }
-  //   }
-    
-  //   return scanResults;
-  // }
-
   /**
  * Get validated scanners for the selected tools - ENHANCED WITH FULL LOGGING
  * @param {Array} tools - Selected tools
@@ -1612,73 +1516,6 @@ async runAllScanners(scanners, uploadDir, resultsDir, scanId) {
     }
   }
 
-  // async runScannerWithTimeout(scanner, uploadDir, outputPath, toolName) {
-  //   return new Promise(async (resolve, reject) => {
-  //     const timeout = setTimeout(() => {
-  //       reject(new Error(`${toolName} scan timed out after ${scanner.config?.timeoutMs || 300000}ms`));
-  //     }, scanner.config?.timeoutMs || 300000);
-      
-  //     try {
-  //       console.log(`🏃 Running ${toolName} scanner on ${uploadDir}`);
-  //       const result = await scanner.scanDirectory(uploadDir, outputPath);
-        
-  //       clearTimeout(timeout);
-        
-  //       if (!result || typeof result !== 'object') {
-  //         throw new Error(`${toolName} returned invalid result format`);
-  //       }
-        
-  //       if (!result.vulnerabilities) {
-  //         result.vulnerabilities = [];
-  //       }
-        
-  //       if (!result.summary) {
-  //         result.summary = {
-  //           total: result.vulnerabilities.length,
-  //           critical: 0,
-  //           high: 0,
-  //           medium: 0,
-  //           low: 0
-  //         };
-          
-  //         result.vulnerabilities.forEach(vuln => {
-  //           if (vuln.severity && result.summary[vuln.severity] !== undefined) {
-  //             result.summary[vuln.severity]++;
-  //           }
-  //         });
-  //       }
-        
-  //       console.log(`\n=== ${toolName.toUpperCase()} SCAN RESULTS ===`);
-  //       console.log(`${toolName} scan completed with ${result.summary.total} total issues:`);
-  //       console.log(`- Critical: ${result.summary.critical}`);
-  //       console.log(`- High: ${result.summary.high}`);
-  //       console.log(`- Medium: ${result.summary.medium}`);
-  //       console.log(`- Low: ${result.summary.low}`);
-        
-  //       if (result.vulnerabilities.length > 0) {
-  //         console.log(`\n${toolName} found issues in:`);
-  //         const fileStats = {};
-  //         result.vulnerabilities.forEach(vuln => {
-  //           const fileName = vuln.file?.fileName || 'unknown';
-  //           fileStats[fileName] = (fileStats[fileName] || 0) + 1;
-  //         });
-          
-  //         Object.entries(fileStats).forEach(([file, count]) => {
-  //           console.log(`  - ${file}: ${count} issues`);
-  //         });
-  //       } else {
-  //         console.log(`${toolName} found no issues`);
-  //       }
-  //       console.log(`=== END ${toolName.toUpperCase()} RESULTS ===\n`);
-        
-  //       resolve(result);
-  //     } catch (error) {
-  //       clearTimeout(timeout);
-  //       console.error(`❌ ${toolName} scanner error:`, error.message);
-  //       reject(error);
-  //     }
-  //   });
-  // }
   /**
  * Enhanced runScannerWithTimeout with more detailed logging
  */
@@ -2000,8 +1837,12 @@ async runScannerWithTimeout(scanner, uploadDir, outputPath, toolName) {
       
       return true;
     } catch (error) {
+      // Preserve the original error message if it's a "not found" error
+      if (error.message && error.message.includes('not found')) {
+        throw error;
+      }
       logger.error(`Error deleting scan: ${error.message}`);
-      throw error;
+      throw new Error(`Error deleting scan: ${error.message}`);
     }
   }
 
