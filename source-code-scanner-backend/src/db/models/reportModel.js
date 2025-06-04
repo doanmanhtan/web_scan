@@ -70,7 +70,7 @@
 
 // module.exports = Report;
 
-// src/db/models/reportModel.js - FIXED VERSION
+// src/db/models/reportModel.js - FINAL FIXED VERSION
 const mongoose = require('mongoose');
 
 const reportSchema = new mongoose.Schema({
@@ -93,8 +93,8 @@ const reportSchema = new mongoose.Schema({
   },
   format: {
     type: String,
-    enum: ['pdf', 'json', 'html', 'csv'],
-    default: 'pdf'
+    enum: ['json', 'html', 'csv'], // UPDATED: Removed 'pdf' as not implemented
+    default: 'json'
   },
   filePath: {
     type: String,
@@ -132,7 +132,7 @@ const reportSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// FIXED: Use schema.index() instead of field-level index: true
+// FIXED: Only use schema.index() to avoid duplicate warnings
 reportSchema.index({ reportId: 1 });
 reportSchema.index({ scan: 1 });
 reportSchema.index({ createdBy: 1 });
