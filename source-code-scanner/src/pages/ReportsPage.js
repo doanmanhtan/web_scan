@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -22,6 +23,11 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  CircularProgress,
+  Alert,
+  Grid,
+  List,
+  ListItem,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -34,28 +40,90 @@ import {
   Edit as EditIcon,
   FilterList as FilterListIcon,
   Sort as SortIcon,
+  InsertDriveFile as InsertDriveFileIcon,
 } from '@mui/icons-material';
 
-// Mock data for reports
-const mockReports = [
-  { id: 1, name: 'Project Alpha Full Scan', date: '2025-04-22 10:30:45', user: 'admin', status: 'completed', issuesCount: 23 },
-  { id: 2, name: 'Security Audit - Module A', date: '2025-04-20 14:22:18', user: 'security_team', status: 'completed', issuesCount: 12 },
-  { id: 3, name: 'Code Quality Review', date: '2025-04-18 09:15:30', user: 'dev_team', status: 'completed', issuesCount: 17 },
-  { id: 4, name: 'Memory Safety Check', date: '2025-04-15 16:45:12', user: 'admin', status: 'completed', issuesCount: 8 },
-  { id: 5, name: 'Performance Optimization', date: '2025-04-12 11:20:34', user: 'dev_team', status: 'completed', issuesCount: 5 },
-  { id: 6, name: 'Weekly Security Scan', date: '2025-04-10 08:30:00', user: 'security_team', status: 'completed', issuesCount: 15 },
-  { id: 7, name: 'Core Module Scan', date: '2025-04-08 13:25:18', user: 'admin', status: 'completed', issuesCount: 19 },
-  { id: 8, name: 'API Integration Test', date: '2025-04-05 15:40:22', user: 'dev_team', status: 'completed', issuesCount: 7 },
-  { id: 9, name: 'Frontend Code Review', date: '2025-04-03 10:15:30', user: 'dev_team', status: 'completed', issuesCount: 11 },
-  { id: 10, name: 'Monthly Security Audit', date: '2025-04-01 09:00:00', user: 'security_team', status: 'completed', issuesCount: 22 },
-];
-
 const ReportsPage = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedReportId, setSelectedReportId] = useState(null);
+  const [reports, setReports] = useState([]);
+  const [selectedReportDetails, setSelectedReportDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        
+        if (id) {
+          const res = await fetch(`/api/scans/${id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+          });
+          if (!res.ok) throw new Error('Failed to fetch report details');
+          const apiData = await res.json();
+          const scan = apiData.data;
+
+          setSelectedReportDetails({
+            id: scan._id,
+            name: scan.name,
+            date: new Date(scan.createdAt).toLocaleString(),
+            user: scan.createdBy ? scan.createdBy.username : 'N/A',
+            status: scan.status,
+            issuesCount: scan.issuesCounts.total || 0,
+            criticalIssues: scan.issuesCounts.critical || 0,
+            highIssues: scan.issuesCounts.high || 0,
+            mediumIssues: scan.issuesCounts.medium || 0,
+            lowIssues: scan.issuesCounts.low || 0,
+            uploadedFiles: scan.uploadedFiles || [],
+            scanDirectory: scan.scanDirectory || '',
+            progress: scan.progress || 0,
+            filesScanned: scan.filesScanned || 0,
+            linesOfCode: scan.linesOfCode || 0,
+            tools: scan.tools || [],
+            startTime: new Date(scan.startTime).toLocaleString(),
+            endTime: new Date(scan.endTime).toLocaleString(),
+            duration: scan.duration ? `${(scan.duration / 1000).toFixed(2)}s` : 'N/A',
+          });
+        } else {
+          const res = await fetch('/api/scans', {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+          });
+          if (!res.ok) throw new Error('Failed to fetch reports');
+          const apiData = await res.json();
+          
+          const mappedReports = (apiData.data.scans || []).map(scan => ({
+            id: scan._id,
+            name: scan.name,
+            date: new Date(scan.createdAt).toLocaleString(),
+            user: scan.createdBy ? scan.createdBy.username : 'N/A',
+            status: scan.status,
+            issuesCount: scan.issuesCounts.total || 0,
+            criticalIssues: scan.issuesCounts.critical || 0,
+            highIssues: scan.issuesCounts.high || 0,
+            mediumIssues: scan.issuesCounts.medium || 0,
+            lowIssues: scan.issuesCounts.low || 0,
+          }));
+          setReports(mappedReports);
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, [id]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -81,26 +149,84 @@ const ReportsPage = () => {
     setSelectedReportId(null);
   };
 
-  const handleViewReport = () => {
-    console.log(`View report: ${selectedReportId}`);
+  const handleViewReport = (reportIdToView) => {
+    navigate(`/reports/${reportIdToView}`);
     handleCloseMenu();
   };
 
-  const handleDownloadReport = () => {
-    console.log(`Download report: ${selectedReportId}`);
+  const handleDownloadReport = (reportIdToDownload) => {
+    console.log(`Download report: ${reportIdToDownload}`);
+    alert(`Downloading report: ${reportIdToDownload}`);
     handleCloseMenu();
   };
 
-  const handleDeleteReport = () => {
-    console.log(`Delete report: ${selectedReportId}`);
+  const handleDeleteReport = (reportIdToDelete) => {
+    console.log(`Delete report: ${reportIdToDelete}`);
+    alert(`Deleting report: ${reportIdToDelete}`);
     handleCloseMenu();
   };
 
-  const filteredReports = mockReports.filter(
+  const filteredReports = reports.filter(
     (report) =>
       report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       report.user.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (loading) return <CircularProgress sx={{ display: 'block', margin: '20px auto' }} />;
+  if (error) return <Alert severity="error">{error}</Alert>;
+
+  if (id && selectedReportDetails) {
+    const report = selectedReportDetails;
+    return (
+      <Box>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Scan Report Details
+        </Typography>
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="h6">Report Name: {report.name}</Typography>
+                <Typography variant="body1">Scan ID: {report.id}</Typography>
+                <Typography variant="body1">Date: {report.date}</Typography>
+                <Typography variant="body1">User: {report.user}</Typography>
+                <Typography variant="body1">Status: {report.status}</Typography>
+                <Typography variant="body1">Total Issues: {report.issuesCount}</Typography>
+                <Typography variant="body1">Files Scanned: {report.filesScanned}</Typography>
+                <Typography variant="body1">Lines of Code: {report.linesOfCode}</Typography>
+                <Typography variant="body1">Duration: {report.duration}</Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="h6">Issue Breakdown:</Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                  {report.criticalIssues > 0 && <Chip label={`Critical: ${report.criticalIssues}`} color="error" />}
+                  {report.highIssues > 0 && <Chip label={`High: ${report.highIssues}`} color="warning" />}
+                  {report.mediumIssues > 0 && <Chip label={`Medium: ${report.mediumIssues}`} color="info" />}
+                  {report.lowIssues > 0 && <Chip label={`Low: ${report.lowIssues}`} color="success" />}
+                </Box>
+                <Typography variant="h6" sx={{ mt: 2 }}>Scanned Tools:</Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                  {report.tools.map(tool => <Chip key={tool} label={tool} variant="outlined" />)}
+                </Box>
+                <Typography variant="h6" sx={{ mt: 2 }}>Uploaded Files:</Typography>
+                <List>
+                  {report.uploadedFiles.map(file => (
+                    <ListItem key={file._id} dense>
+                      <ListItemIcon><InsertDriveFileIcon /></ListItemIcon>
+                      <ListItemText primary={file.originalName} secondary={`Size: ${file.fileSize} bytes`} />
+                    </ListItem>
+                  ))}
+                </List>
+              </Grid>
+            </Grid>
+            <Box sx={{ mt: 4 }}>
+              <Button variant="contained" onClick={() => window.history.back()}>Back to Reports</Button>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -118,14 +244,14 @@ const ReportsPage = () => {
               <Typography variant="subtitle2" color="text.secondary">
                 Total Reports
               </Typography>
-              <Typography variant="h4">{mockReports.length}</Typography>
+              <Typography variant="h4">{reports.length}</Typography>
             </Paper>
             <Paper sx={{ p: 2, minWidth: 180 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Total Issues Found
               </Typography>
               <Typography variant="h4">
-                {mockReports.reduce((sum, report) => sum + report.issuesCount, 0)}
+                {reports.reduce((sum, report) => sum + report.issuesCount, 0)}
               </Typography>
             </Paper>
             <Paper sx={{ p: 2, minWidth: 180 }}>
@@ -133,9 +259,9 @@ const ReportsPage = () => {
                 Average Issues per Scan
               </Typography>
               <Typography variant="h4">
-                {Math.round(
-                  mockReports.reduce((sum, report) => sum + report.issuesCount, 0) / mockReports.length
-                )}
+                {reports.length > 0 ? Math.round(
+                  reports.reduce((sum, report) => sum + report.issuesCount, 0) / reports.length
+                ) : 0}
               </Typography>
             </Paper>
           </Box>
@@ -202,18 +328,19 @@ const ReportsPage = () => {
                       <Chip 
                         label={report.issuesCount} 
                         color={
-                          report.issuesCount > 20 ? 'error' : 
-                          report.issuesCount > 10 ? 'warning' : 
-                          'default'
+                          report.criticalIssues > 0 ? 'error' : 
+                          report.highIssues > 0 ? 'warning' : 
+                          report.mediumIssues > 0 ? 'info' : 
+                          'success'
                         }
                         size="small"
                       />
                     </TableCell>
                     <TableCell align="right">
-                      <IconButton onClick={() => window.open('#/report-details', '_blank')}>
+                      <IconButton onClick={() => handleViewReport(report.id)}>
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
-                      <IconButton>
+                      <IconButton onClick={() => handleDownloadReport(report.id)}>
                         <DownloadIcon fontSize="small" />
                       </IconButton>
                       <IconButton onClick={(e) => handleOpenMenu(e, report.id)}>
@@ -251,41 +378,16 @@ const ReportsPage = () => {
         open={Boolean(anchorEl)}
         onClose={handleCloseMenu}
       >
-        <MenuItem onClick={handleViewReport}>
-          <ListItemIcon>
-            <VisibilityIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>View Report</ListItemText>
+        <MenuItem onClick={() => handleViewReport(selectedReportId)}>
+          <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>View Details</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleDownloadReport}>
-          <ListItemIcon>
-            <DownloadIcon fontSize="small" />
-          </ListItemIcon>
+        <MenuItem onClick={() => handleDownloadReport(selectedReportId)}>
+          <ListItemIcon><DownloadIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Download</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleDownloadReport}>
-          <ListItemIcon>
-            <PrintIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Print</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDownloadReport}>
-          <ListItemIcon>
-            <ShareIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Share</ListItemText>
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleDownloadReport}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Rename</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDeleteReport} sx={{ color: 'error.main' }}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
+        <MenuItem onClick={() => handleDeleteReport(selectedReportId)}>
+          <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Delete</ListItemText>
         </MenuItem>
       </Menu>

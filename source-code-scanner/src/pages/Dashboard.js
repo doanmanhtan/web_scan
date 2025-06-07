@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -33,49 +33,17 @@ import {
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
-// Mock data for recent scans
-const recentScans = [
-  { id: 1, name: 'Project Alpha Scan', date: '2025-04-22', status: 'completed', highIssues: 3, mediumIssues: 8, lowIssues: 12 },
-  { id: 2, name: 'Security Audit', date: '2025-04-20', status: 'completed', highIssues: 1, mediumIssues: 4, lowIssues: 7 },
-  { id: 3, name: 'Code Cleanup', date: '2025-04-18', status: 'completed', highIssues: 0, mediumIssues: 2, lowIssues: 15 },
-];
-
-// Mock data for issues over time
-const issuesOverTime = [
-  { date: '2025-03-01', high: 8, medium: 15, low: 20 },
-  { date: '2025-03-15', high: 7, medium: 13, low: 18 },
-  { date: '2025-04-01', high: 5, medium: 10, low: 15 },
-  { date: '2025-04-15', high: 4, medium: 8, low: 14 },
-  { date: '2025-04-22', high: 3, medium: 6, low: 12 },
-];
-
-// Mock data for total issues
-const totalIssues = {
-  high: 3,
-  medium: 6,
-  low: 12,
-};
-
-const pieChartData = [
-  { name: 'High', value: totalIssues.high, color: '#f44336' },
-  { name: 'Medium', value: totalIssues.medium, color: '#ff9800' },
-  { name: 'Low', value: totalIssues.low, color: '#4caf50' },
-];
-
-// Mock data for recent projects
-const recentProjects = [
-  { id: 1, name: 'Project Alpha', lastScan: '2025-04-22', issuesCount: 23 },
-  { id: 2, name: 'Security Module', lastScan: '2025-04-20', issuesCount: 12 },
-  { id: 3, name: 'Core Library', lastScan: '2025-04-18', issuesCount: 17 },
-];
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [issuesOverTime, setIssuesOverTime] = useState([]);
+  const [recentScans, setRecentScans] = useState([]);
+  const [recentProjects, setRecentProjects] = useState([]);
 
   useEffect(() => {
+    // Lấy số liệu tổng hợp
     const fetchSummary = async () => {
       try {
         setLoading(true);
@@ -94,12 +62,128 @@ const Dashboard = () => {
         setLoading(false);
       }
     };
+
+    // Lấy dữ liệu từng ngày cho biểu đồ thời gian
+    const fetchTrends = async () => {
+      try {
+        const res = await fetch('/api/scans', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        if (!res.ok) throw new Error('Failed to fetch scan trends');
+        const data = await res.json();
+        const scans = data.data.scans || [];
+        const trends = scans.map(scan => ({
+          date: scan.createdAt.slice(0, 10), // yyyy-mm-dd
+          critical: scan.issuesCounts.critical || 0,
+          high: scan.issuesCounts.high || 0,
+          medium: scan.issuesCounts.medium || 0,
+          low: scan.issuesCounts.low || 0,
+        }));
+        setIssuesOverTime(trends);
+      } catch (err) {
+        setIssuesOverTime([]);
+      }
+    };
+
+    const fetchRecentScans = async () => {
+      try {
+        const res = await fetch('/api/scans', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        if (!res.ok) throw new Error('Failed to fetch scans');
+        const data = await res.json();
+        // Lấy 5 scan mới nhất
+        const scans = (data.data.scans || []).slice(0, 5).map(scan => ({
+          id: scan._id,
+          name: scan.name,
+          date: scan.createdAt.slice(0, 10),
+          status: scan.status,
+          criticalIssues: scan.issuesCounts.critical || 0,
+          highIssues: scan.issuesCounts.high || 0,
+          mediumIssues: scan.issuesCounts.medium || 0,
+          lowIssues: scan.issuesCounts.low || 0,
+        }));
+        setRecentScans(scans);
+      } catch (err) {
+        setRecentScans([]);
+      }
+    };
+
+    // Lấy dữ liệu Recent Projects từ API scans và xử lý
+    const fetchRecentProjects = async () => {
+      try {
+        const res = await fetch('/api/scans', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        if (!res.ok) throw new Error('Failed to fetch projects');
+        const apiData = await res.json();
+        const scans = apiData.data.scans || [];
+
+        // Nhóm các scan theo tên (tạm xem là tên project) và lấy scan gần nhất cho mỗi project
+        const projectsMap = new Map();
+        scans.forEach(scan => {
+          const projectName = scan.name;
+          if (!projectsMap.has(projectName) || new Date(scan.createdAt) > new Date(projectsMap.get(projectName).createdAt)) {
+            projectsMap.set(projectName, scan);
+          }
+        });
+
+        // Chuyển đổi Map thành mảng các project và giới hạn 5 project gần nhất
+        const mappedProjects = Array.from(projectsMap.values())
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5)
+          .map(project => ({
+            id: project._id,
+            name: project.name,
+            lastScan: project.createdAt.slice(0, 10),
+            issuesCount: project.issuesCounts.total || 0,
+          }));
+
+        setRecentProjects(mappedProjects);
+      } catch (err) {
+        setRecentProjects([]);
+      }
+    };
+
     fetchSummary();
+    fetchTrends();
+    fetchRecentScans();
+    fetchRecentProjects();
   }, []);
 
-  const handleStartNewScan = () => {
-    navigate('/scanner');
+  // Thống nhất màu sắc
+  const COLORS = {
+    critical: '#f44336', // đỏ tươi
+    high: '#ff9800',     // cam
+    medium: '#2196f3',   // xanh dương
+    low: '#4caf50',      // xanh lá
   };
+
+  // Pie chart data
+  const pieChartData = summary ? [
+    { name: 'Critical', value: summary.issueStats.critical, color: COLORS.critical },
+    { name: 'High', value: summary.issueStats.high, color: COLORS.high },
+    { name: 'Medium', value: summary.issueStats.medium, color: COLORS.medium },
+    { name: 'Low', value: summary.issueStats.low, color: COLORS.low },
+  ] : [];
+
+  const handleStartNewScan = useCallback(() => {
+    navigate('/scanner');
+  }, [navigate]);
+
+  const handleViewAllScans = useCallback(() => {
+    navigate('/reports');
+  }, [navigate]);
+
+  const handleViewAllProjects = useCallback(() => {
+    navigate('/reports');
+  }, [navigate]);
 
   const getIssueIcon = (severity) => {
     switch (severity) {
@@ -182,12 +266,12 @@ const Dashboard = () => {
           </Grid>
           <Grid item xs={12} md={2.4}>
             <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h6" color="primary" gutterBottom>
+              <Typography variant="h6" color="default" gutterBottom>
                 Total Issues
               </Typography>
-              <Typography variant="h4" color="primary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Typography variant="h4" color="default" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {summary.issueStats.total}
-                <BugIcon color="primary" sx={{ ml: 1 }} />
+                <BugIcon color="default" sx={{ ml: 1 }} />
               </Typography>
             </Paper>
           </Grid>
@@ -226,16 +310,23 @@ const Dashboard = () => {
               Issues Over Time
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={issuesOverTime}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="high" stroke="#f44336" name="High" />
-                <Line type="monotone" dataKey="medium" stroke="#ff9800" name="Medium" />
-                <Line type="monotone" dataKey="low" stroke="#4caf50" name="Low" />
-              </LineChart>
+              {issuesOverTime.length > 0 ? (
+                <LineChart data={issuesOverTime}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="critical" stroke={COLORS.critical} name="Critical" />
+                  <Line type="monotone" dataKey="high" stroke={COLORS.high} name="High" />
+                  <Line type="monotone" dataKey="medium" stroke={COLORS.medium} name="Medium" />
+                  <Line type="monotone" dataKey="low" stroke={COLORS.low} name="Low" />
+                </LineChart>
+              ) : (
+                <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Typography color="text.secondary">No data available</Typography>
+                </Box>
+              )}
             </ResponsiveContainer>
           </Paper>
         </Grid>
@@ -257,7 +348,7 @@ const Dashboard = () => {
                   <React.Fragment key={scan.id}>
                     <ListItem
                       secondaryAction={
-                        <IconButton edge="end" aria-label="view">
+                        <IconButton edge="end" aria-label="view" onClick={() => navigate(`/reports/${scan.id}`)}>
                           <ArrowForwardIcon />
                         </IconButton>
                       }
@@ -270,9 +361,10 @@ const Dashboard = () => {
                         secondary={`${scan.date} - ${scan.status}`}
                       />
                       <Box sx={{ display: 'flex', gap: 1, mr: 2 }}>
-                        <Chip size="small" label={scan.highIssues} color="error" icon={<ErrorIcon />} />
-                        <Chip size="small" label={scan.mediumIssues} color="warning" icon={<WarningIcon />} />
-                        <Chip size="small" label={scan.lowIssues} color="success" icon={<InfoIcon />} />
+                        {scan.criticalIssues > 0 && <Chip size="small" label={scan.criticalIssues} sx={{ bgcolor: COLORS.critical, color: 'white' }} icon={<ErrorIcon sx={{ color: 'white' }} />} />}
+                        {scan.highIssues > 0 && <Chip size="small" label={scan.highIssues} sx={{ bgcolor: COLORS.high, color: 'white' }} icon={<WarningIcon sx={{ color: 'white' }} />} />}
+                        {scan.mediumIssues > 0 && <Chip size="small" label={scan.mediumIssues} sx={{ bgcolor: COLORS.medium, color: 'white' }} icon={<InfoIcon sx={{ color: 'white' }} />} />}
+                        {scan.lowIssues > 0 && <Chip size="small" label={scan.lowIssues} sx={{ bgcolor: COLORS.low, color: 'white' }} icon={<InfoIcon sx={{ color: 'white' }} />} />}
                       </Box>
                     </ListItem>
                     {recentScans.indexOf(scan) < recentScans.length - 1 && <Divider variant="inset" component="li" />}
@@ -281,7 +373,7 @@ const Dashboard = () => {
               </List>
             </CardContent>
             <CardActions>
-              <Button size="small" endIcon={<ArrowForwardIcon />}>
+              <Button size="small" endIcon={<ArrowForwardIcon />} onClick={handleViewAllScans}>
                 View All Scans
               </Button>
             </CardActions>
@@ -305,7 +397,7 @@ const Dashboard = () => {
                   <React.Fragment key={project.id}>
                     <ListItem
                       secondaryAction={
-                        <IconButton edge="end" aria-label="view">
+                        <IconButton edge="end" aria-label="view" onClick={() => navigate(`/reports/${project.id}`)}>
                           <ArrowForwardIcon />
                         </IconButton>
                       }
@@ -329,7 +421,7 @@ const Dashboard = () => {
               </List>
             </CardContent>
             <CardActions>
-              <Button size="small" endIcon={<ArrowForwardIcon />}>
+              <Button size="small" endIcon={<ArrowForwardIcon />} onClick={handleViewAllProjects}>
                 View All Projects
               </Button>
             </CardActions>
@@ -393,49 +485,6 @@ const Dashboard = () => {
             </Box>
           </Paper>
         </Grid>
-
-        {/* <Grid container spacing={2}>
-          <Grid item xs={12} md={2.4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" color="error.main" gutterBottom>
-                Critical Issues
-              </Typography>
-              <Typography variant="h4" color="error.main">{summary.issueStats.critical}</Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={2.4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" color="warning.main" gutterBottom>
-                High Issues
-              </Typography>
-              <Typography variant="h4" color="warning.main">{summary.issueStats.high}</Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={2.4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" color="info.main" gutterBottom>
-                Medium Issues
-              </Typography>
-              <Typography variant="h4" color="info.main">{summary.issueStats.medium}</Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={2.4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" color="success.main" gutterBottom>
-                Low Issues
-              </Typography>
-              <Typography variant="h4" color="success.main">{summary.issueStats.low}</Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={2.4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" color="primary" gutterBottom>
-                Total Issues
-              </Typography>
-              <Typography variant="h4" color="primary">{summary.issueStats.total}</Typography>
-            </Paper>
-          </Grid>
-        </Grid> */}
       </Grid>
     </Box>
   );

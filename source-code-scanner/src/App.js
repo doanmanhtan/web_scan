@@ -41,6 +41,7 @@ function App() {
                 <Route index element={<Dashboard />} />
                 <Route path="scanner" element={<ScannerPage />} />
                 <Route path="reports" element={<ReportsPage />} />
+                <Route path="reports/:id" element={<ReportsPage />} />
                 <Route path="vulnerabilities" element={<VulnerabilitiesPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="change-password" element={<ChangePassword />} />
