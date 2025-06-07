@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -16,6 +16,8 @@ import {
   Divider,
   Chip,
   IconButton,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Security as SecurityIcon,
@@ -69,6 +71,31 @@ const recentProjects = [
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const res = await fetch('/api/scans/stats/summary', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        if (!res.ok) throw new Error('Failed to fetch dashboard data');
+        const data = await res.json();
+        setSummary(data.data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSummary();
+  }, []);
 
   const handleStartNewScan = () => {
     navigate('/scanner');
@@ -87,6 +114,9 @@ const Dashboard = () => {
     }
   };
 
+  if (loading) return <CircularProgress />;
+  if (error) return <Alert severity="error">{error}</Alert>;
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -103,40 +133,64 @@ const Dashboard = () => {
         </Button>
       </Box>
 
+
       <Grid container spacing={3}>
-        {/* Summary Cards */}
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 120 }}>
-            <Typography variant="h6" color="primary" gutterBottom>
-              Total Scans
-            </Typography>
-            <Typography variant="h3" component="div" sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-              24
-              <SecurityIcon sx={{ ml: 1, color: 'primary.main' }} />
-            </Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 120 }}>
-            <Typography variant="h6" color="warning.main" gutterBottom>
-              Open Issues
-            </Typography>
-            <Typography variant="h3" component="div" sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-              {totalIssues.high + totalIssues.medium + totalIssues.low}
-              <BugIcon sx={{ ml: 1, color: 'warning.main' }} />
-            </Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 120 }}>
-            <Typography variant="h6" color="error.main" gutterBottom>
-              Critical Issues
-            </Typography>
-            <Typography variant="h3" component="div" sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-              {totalIssues.high}
-              <ErrorIcon sx={{ ml: 1, color: 'error.main' }} />
-            </Typography>
-          </Paper>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={2.4}>
+            <Paper sx={{ p: 2, textAlign: 'center' }}>
+              <Typography variant="h6" color="error.main" gutterBottom>
+                Critical Issues
+              </Typography>
+              <Typography variant="h4" color="error.main" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {summary.issueStats.critical}
+                <ErrorIcon color="error" sx={{ ml: 1 }} />
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={2.4}>
+            <Paper sx={{ p: 2, textAlign: 'center' }}>
+              <Typography variant="h6" sx={{ color: '#ff9800' }} gutterBottom>
+                High Issues
+              </Typography>
+              <Typography variant="h4" sx={{ color: '#ff9800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {summary.issueStats.high}
+                <WarningIcon sx={{ color: '#ff9800', ml: 1 }} />
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={2.4}>
+            <Paper sx={{ p: 2, textAlign: 'center' }}>
+              <Typography variant="h6" sx={{ color: '#2196f3' }} gutterBottom>
+                Medium Issues
+              </Typography>
+              <Typography variant="h4" sx={{ color: '#2196f3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {summary.issueStats.medium}
+                <InfoIcon sx={{ color: '#2196f3', ml: 1 }} />
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={2.4}>
+            <Paper sx={{ p: 2, textAlign: 'center' }}>
+              <Typography variant="h6" sx={{ color: '#4caf50' }} gutterBottom>
+                Low Issues
+              </Typography>
+              <Typography variant="h4" sx={{ color: '#4caf50', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {summary.issueStats.low}
+                <InfoIcon sx={{ color: '#4caf50', ml: 1 }} />
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={2.4}>
+            <Paper sx={{ p: 2, textAlign: 'center' }}>
+              <Typography variant="h6" color="primary" gutterBottom>
+                Total Issues
+              </Typography>
+              <Typography variant="h4" color="primary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {summary.issueStats.total}
+                <BugIcon color="primary" sx={{ ml: 1 }} />
+              </Typography>
+            </Paper>
+          </Grid>
         </Grid>
 
         {/* Charts */}
@@ -339,6 +393,49 @@ const Dashboard = () => {
             </Box>
           </Paper>
         </Grid>
+
+        {/* <Grid container spacing={2}>
+          <Grid item xs={12} md={2.4}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" color="error.main" gutterBottom>
+                Critical Issues
+              </Typography>
+              <Typography variant="h4" color="error.main">{summary.issueStats.critical}</Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={2.4}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" color="warning.main" gutterBottom>
+                High Issues
+              </Typography>
+              <Typography variant="h4" color="warning.main">{summary.issueStats.high}</Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={2.4}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" color="info.main" gutterBottom>
+                Medium Issues
+              </Typography>
+              <Typography variant="h4" color="info.main">{summary.issueStats.medium}</Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={2.4}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" color="success.main" gutterBottom>
+                Low Issues
+              </Typography>
+              <Typography variant="h4" color="success.main">{summary.issueStats.low}</Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={2.4}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" color="primary" gutterBottom>
+                Total Issues
+              </Typography>
+              <Typography variant="h4" color="primary">{summary.issueStats.total}</Typography>
+            </Paper>
+          </Grid>
+        </Grid> */}
       </Grid>
     </Box>
   );

@@ -28,6 +28,7 @@ import {
   Settings as SettingsIcon,
   AccountCircle,
 } from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 240;
 
@@ -42,6 +43,7 @@ const menuItems = [
 function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -160,9 +162,9 @@ function MainLayout() {
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
           >
-            <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
-            <MenuItem onClick={handleMenuClose}>My account</MenuItem>
-            <MenuItem onClick={handleMenuClose}>Logout</MenuItem>
+            <MenuItem onClick={() => navigate('/profile')}>Profile</MenuItem>
+            <MenuItem onClick={() => navigate('/settings')}>Settings</MenuItem>
+            <MenuItem onClick={logout}>Logout</MenuItem>
           </Menu>
         </Toolbar>
       </AppBar>
