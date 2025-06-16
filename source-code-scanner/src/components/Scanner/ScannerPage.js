@@ -17,14 +17,14 @@ import {
 } from '@mui/icons-material';
 
 // Contexts
-import { useScan } from '../contexts/ScanContext';
+import { useScan } from '../../contexts/ScanContext';
 
 // Components
-import FileUploader from '../components/Scanner/FileUploader';
-import FileList from '../components/Scanner/FileList';
-import ScanOptions from '../components/Scanner/ScanOptions';
-import ScanResults from '../components/Scanner/ScanResults';
-import ProgressIndicator from '../components/Scanner/ProgressIndicator';
+import FileUploader from './FileUploader';
+import FileList from './FileList';
+import ScanOptions from './ScanOptions';
+import ScanResults from './ScanResults';
+import ProgressIndicator from './ProgressIndicator';
 
 const steps = ['Select Files', 'Configure Scan', 'Start Scan'];
 
