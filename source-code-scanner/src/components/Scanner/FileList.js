@@ -74,27 +74,19 @@ const FileList = ({ files, onRemoveFile }) => {
             <ListItemText
               primary={file.name}
               secondary={
-                <Box>
-                  <Typography variant="body2" component="span" color="textSecondary">
+                <Typography component="div" variant="body2" color="textSecondary">
+                  <Box component="span" display="block">
                     {file.path}
-                  </Typography>
-                  {!file.isDirectory && file.size && (
-                    <Chip 
-                      size="small" 
-                      label={getFileSize(file.size)} 
-                      sx={{ ml: 1 }}
-                    />
-                  )}
-                  {file.isDirectory && (
-                    <Chip 
-                      size="small" 
-                      label="Directory" 
-                      color="primary" 
-                      variant="outlined" 
-                      sx={{ ml: 1 }}
-                    />
-                  )}
-                </Box>
+                  </Box>
+                  <Box component="span" display="inline-flex" alignItems="center" gap={1} mt={0.5}>
+                    {!file.isDirectory && file.size && (
+                      <Chip size="small" label={getFileSize(file.size)} />
+                    )}
+                    {file.isDirectory && (
+                      <Chip size="small" label="Directory" color="primary" variant="outlined" />
+                    )}
+                  </Box>
+                </Typography>
               }
             />
             <ListItemSecondaryAction>

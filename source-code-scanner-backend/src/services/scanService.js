@@ -917,8 +917,7 @@
 //   }
 // }
 
-// module.exports = new ScanService();
-//// cai nay khi chua them cppcheck va clangtidy analist
+// module.exports = new ScanService();//// cai nay khi chua them cppcheck va clangtidy analist
 
 
 // src/services/scanService.js - FIXED VERSION

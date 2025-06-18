@@ -144,7 +144,7 @@ const ScanOptions = ({ onScanTypeChange, onToolSelection, selectedTools, scanTyp
             Select Analysis Tools
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            {['semgrep', 'snyk', 'clangtidy'].map((tool) => (
+            {['semgrep', 'snyk', 'clangtidy','cppcheck','clangStaticAnalyzer'].map((tool) => (
               <Chip
                 key={tool}
                 label={tool}

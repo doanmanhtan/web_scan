@@ -166,6 +166,10 @@ const ReportsPage = () => {
     handleCloseMenu();
   };
 
+  const handleIssueClick = (severity) => {
+    navigate(`/reports/${id}/issues?severity=${severity}`);
+  };
+
   const filteredReports = reports.filter(
     (report) =>
       report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -199,10 +203,10 @@ const ReportsPage = () => {
               <Grid item xs={12} md={6}>
                 <Typography variant="h6">Issue Breakdown:</Typography>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                  {report.criticalIssues > 0 && <Chip label={`Critical: ${report.criticalIssues}`} color="error" />}
-                  {report.highIssues > 0 && <Chip label={`High: ${report.highIssues}`} color="warning" />}
-                  {report.mediumIssues > 0 && <Chip label={`Medium: ${report.mediumIssues}`} color="info" />}
-                  {report.lowIssues > 0 && <Chip label={`Low: ${report.lowIssues}`} color="success" />}
+                  {report.criticalIssues > 0 && <Chip label={`Critical: ${report.criticalIssues}`} color="error" onClick={() => handleIssueClick('critical')} />}
+                  {report.highIssues > 0 && <Chip label={`High: ${report.highIssues}`} color="warning" onClick={() => handleIssueClick('high')} />}
+                  {report.mediumIssues > 0 && <Chip label={`Medium: ${report.mediumIssues}`} color="info" onClick={() => handleIssueClick('medium')} />}
+                  {report.lowIssues > 0 && <Chip label={`Low: ${report.lowIssues}`} color="success" onClick={() => handleIssueClick('low')} />}
                 </Box>
                 <Typography variant="h6" sx={{ mt: 2 }}>Scanned Tools:</Typography>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>

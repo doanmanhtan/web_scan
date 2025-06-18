@@ -25,6 +25,7 @@ import Register from './pages/auth/Register';
 import Profile from './pages/user/Profile';
 import ChangePassword from './pages/user/ChangePassword';
 import ForgotPassword from './pages/auth/ForgotPassword';
+import IssueDetailsPage from './components/Reports/IssueDetailsPage';
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
                 <Route path="scanner" element={<ScannerPage />} />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="reports/:id" element={<ReportsPage />} />
+                <Route path="reports/:id/issues" element={<IssueDetailsPage />} />
                 <Route path="vulnerabilities" element={<VulnerabilitiesPage />} />
                 <Route path="vulnerabilities/:id" element={<VulnerabilityDetails />} />
                 <Route path="settings" element={<SettingsPage />} />
