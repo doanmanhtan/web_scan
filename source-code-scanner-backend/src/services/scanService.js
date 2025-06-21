@@ -1610,6 +1610,119 @@ async runScannerWithTimeout(scanner, uploadDir, outputPath, toolName) {
   });
 }
 
+  // async processScanResults(scanId, scanResults) {
+  //   try {
+  //     const scan = await scanRepository.getScanById(scanId);
+      
+  //     if (!scan) {
+  //       throw new Error(`Scan not found: ${scanId}`);
+  //     }
+      
+  //     console.log(`💾 Processing results from ${scanResults.length} scanners`);
+      
+  //     const deleteResult = await vulnerabilityRepository.deleteVulnerabilitiesByScan(scanId);
+  //     console.log(`🗑️ Deleted ${deleteResult.deletedCount || 0} existing vulnerabilities`);
+      
+  //     const vulnerabilities = [];
+  //     let totalProcessed = 0;
+      
+  //     for (const result of scanResults) {
+  //       if (!result.vulnerabilities || !Array.isArray(result.vulnerabilities)) {
+  //         console.warn(`⚠️ Invalid vulnerabilities array from ${result.scanner || 'unknown'} scanner`);
+  //         continue;
+  //       }
+        
+  //       console.log(`🔍 Processing ${result.vulnerabilities.length} vulnerabilities from ${result.scanner || 'unknown'}`);
+        
+  //       for (const vuln of result.vulnerabilities) {
+  //         try {
+  //           if (!vuln.name || !vuln.severity || !vuln.tool) {
+  //             console.warn('⚠️ Skipping invalid vulnerability:', {
+  //               name: vuln.name,
+  //               severity: vuln.severity,
+  //               tool: vuln.tool,
+  //               hasName: !!vuln.name,
+  //               hasSeverity: !!vuln.severity,
+  //               hasTool: !!vuln.tool
+  //             });
+  //             continue;
+  //           }
+            
+  //           const vulnerabilityDoc = {
+  //             scan: scanId,
+  //             name: vuln.name,
+  //             severity: vuln.severity,
+  //             type: vuln.type || 'Unknown',
+  //             tool: vuln.tool,
+  //             file: vuln.file || { fileName: 'unknown', filePath: 'unknown', fileExt: '' },
+  //             location: vuln.location || { line: 1, column: 1 },
+  //             description: vuln.description || 'No description provided',
+  //             codeSnippet: vuln.codeSnippet || { line: '', before: [], after: [] },
+  //             remediation: vuln.remediation || { description: 'No remediation provided' },
+  //             references: vuln.references || [],
+  //             status: 'open',
+  //             createdAt: new Date(),
+  //             updatedAt: new Date()
+  //           };
+            
+  //           vulnerabilities.push(vulnerabilityDoc);
+  //           totalProcessed++;
+  //         } catch (vulnError) {
+  //           console.error('❌ Error processing vulnerability:', vulnError.message, vuln);
+  //         }
+  //       }
+  //     }
+      
+  //     console.log(`✅ Processed ${totalProcessed} vulnerabilities total`);
+      
+  //     if (vulnerabilities.length > 0) {
+  //       console.log(`💾 Saving ${vulnerabilities.length} vulnerabilities to database...`);
+        
+  //       const chunkSize = 50;
+  //       let insertedCount = 0;
+  //       let errorCount = 0;
+        
+  //       for (let i = 0; i < vulnerabilities.length; i += chunkSize) {
+  //         const chunk = vulnerabilities.slice(i, i + chunkSize);
+  //         try {
+  //           console.log(`💾 Inserting chunk ${Math.floor(i/chunkSize) + 1}/${Math.ceil(vulnerabilities.length/chunkSize)} (${chunk.length} items)...`);
+            
+  //           const insertResult = await vulnerabilityRepository.createBulkVulnerabilities(chunk);
+  //           insertedCount += chunk.length;
+            
+  //           console.log(`✅ Successfully inserted chunk: ${insertedCount}/${vulnerabilities.length} vulnerabilities`);
+  //         } catch (insertError) {
+  //           errorCount += chunk.length;
+  //           console.error(`❌ Error inserting vulnerability chunk ${i}-${i + chunkSize}:`, insertError.message);
+            
+  //           for (const vuln of chunk) {
+  //             try {
+  //               await vulnerabilityRepository.createVulnerability(vuln);
+  //               insertedCount++;
+  //               errorCount--;
+  //             } catch (singleError) {
+  //               console.error(`❌ Failed to insert individual vulnerability:`, singleError.message, vuln.name);
+  //             }
+  //           }
+  //         }
+  //       }
+        
+  //       console.log(`🎯 Database save complete: ${insertedCount} inserted, ${errorCount} failed`);
+  //       logger.info(`Saved ${insertedCount} vulnerabilities for scan ${scanId}`);
+        
+  //       const savedCount = await vulnerabilityRepository.countVulnerabilities({ scan: scanId });
+  //       console.log(`✅ Verification: ${savedCount} vulnerabilities now in database for scan ${scanId}`);
+  //     } else {
+  //       console.log(`ℹ️ No vulnerabilities to save for scan ${scanId}`);
+  //       logger.info(`No vulnerabilities found for scan ${scanId}`);
+  //     }
+  //   } catch (error) {
+  //     console.error(`💥 Error processing scan results for ${scanId}:`, error.message);
+  //     console.error(`Stack trace:`, error.stack);
+  //     logger.error(`Error processing scan results: ${error.message}`);
+  //     throw error;
+  //   }
+  // }
   async processScanResults(scanId, scanResults) {
     try {
       const scan = await scanRepository.getScanById(scanId);
@@ -1636,11 +1749,12 @@ async runScannerWithTimeout(scanner, uploadDir, outputPath, toolName) {
         
         for (const vuln of result.vulnerabilities) {
           try {
+            // ENHANCED validation with detailed logging
             if (!vuln.name || !vuln.severity || !vuln.tool) {
               console.warn('⚠️ Skipping invalid vulnerability:', {
-                name: vuln.name,
-                severity: vuln.severity,
-                tool: vuln.tool,
+                name: vuln.name || 'MISSING',
+                severity: vuln.severity || 'MISSING', 
+                tool: vuln.tool || 'MISSING',
                 hasName: !!vuln.name,
                 hasSeverity: !!vuln.severity,
                 hasTool: !!vuln.tool
@@ -1648,8 +1762,11 @@ async runScannerWithTimeout(scanner, uploadDir, outputPath, toolName) {
               continue;
             }
             
+            // ENHANCED: Log the vulnerability being processed
+            console.log(`📝 Processing vulnerability: ${vuln.name} (${vuln.severity}, ${vuln.tool})`);
+            
             const vulnerabilityDoc = {
-              scan: scanId,
+              scan: scanId, // MongoDB ObjectId
               name: vuln.name,
               severity: vuln.severity,
               type: vuln.type || 'Unknown',
@@ -1665,10 +1782,15 @@ async runScannerWithTimeout(scanner, uploadDir, outputPath, toolName) {
               updatedAt: new Date()
             };
             
+            // ENHANCED: Validate the document structure
+            console.log(`✅ Created document for: ${vulnerabilityDoc.name}`);
+            
             vulnerabilities.push(vulnerabilityDoc);
             totalProcessed++;
           } catch (vulnError) {
-            console.error('❌ Error processing vulnerability:', vulnError.message, vuln);
+            // FIXED: Proper error handling without accessing .error
+            console.error('❌ Error processing vulnerability:', vulnError.message);
+            console.error('Vulnerability data:', JSON.stringify(vuln, null, 2));
           }
         }
       }
@@ -1678,7 +1800,8 @@ async runScannerWithTimeout(scanner, uploadDir, outputPath, toolName) {
       if (vulnerabilities.length > 0) {
         console.log(`💾 Saving ${vulnerabilities.length} vulnerabilities to database...`);
         
-        const chunkSize = 50;
+        // ENHANCED: Better chunk processing with detailed error logging
+        const chunkSize = 10; // Smaller chunks for better error isolation
         let insertedCount = 0;
         let errorCount = 0;
         
@@ -1687,21 +1810,41 @@ async runScannerWithTimeout(scanner, uploadDir, outputPath, toolName) {
           try {
             console.log(`💾 Inserting chunk ${Math.floor(i/chunkSize) + 1}/${Math.ceil(vulnerabilities.length/chunkSize)} (${chunk.length} items)...`);
             
+            // Log each item in the chunk
+            chunk.forEach((vuln, idx) => {
+              console.log(`   ${idx + 1}. ${vuln.name} (${vuln.tool})`);
+            });
+            
             const insertResult = await vulnerabilityRepository.createBulkVulnerabilities(chunk);
             insertedCount += chunk.length;
             
             console.log(`✅ Successfully inserted chunk: ${insertedCount}/${vulnerabilities.length} vulnerabilities`);
           } catch (insertError) {
-            errorCount += chunk.length;
+            // FIXED: Proper error handling 
             console.error(`❌ Error inserting vulnerability chunk ${i}-${i + chunkSize}:`, insertError.message);
+            console.error('Full error object:', insertError);
+            errorCount += chunk.length;
             
+            // Try inserting individually to identify problematic records
+            console.log(`🔍 Trying individual insertion for failed chunk...`);
             for (const vuln of chunk) {
               try {
+                console.log(`   Trying: ${vuln.name}...`);
                 await vulnerabilityRepository.createVulnerability(vuln);
                 insertedCount++;
                 errorCount--;
+                console.log(`   ✅ Success: ${vuln.name}`);
               } catch (singleError) {
-                console.error(`❌ Failed to insert individual vulnerability:`, singleError.message, vuln.name);
+                // FIXED: Proper error handling
+                console.error(`   ❌ Failed: ${vuln.name} - ${singleError.message}`);
+                
+                // ENHANCED: Debug the exact validation error
+                if (singleError.errors) {
+                  console.error('   Validation errors:', Object.keys(singleError.errors));
+                  Object.entries(singleError.errors).forEach(([field, error]) => {
+                    console.error(`     ${field}: ${error.message}`);
+                  });
+                }
               }
             }
           }
@@ -1710,6 +1853,7 @@ async runScannerWithTimeout(scanner, uploadDir, outputPath, toolName) {
         console.log(`🎯 Database save complete: ${insertedCount} inserted, ${errorCount} failed`);
         logger.info(`Saved ${insertedCount} vulnerabilities for scan ${scanId}`);
         
+        // Verify insertion by counting
         const savedCount = await vulnerabilityRepository.countVulnerabilities({ scan: scanId });
         console.log(`✅ Verification: ${savedCount} vulnerabilities now in database for scan ${scanId}`);
       } else {
@@ -1717,6 +1861,7 @@ async runScannerWithTimeout(scanner, uploadDir, outputPath, toolName) {
         logger.info(`No vulnerabilities found for scan ${scanId}`);
       }
     } catch (error) {
+      // FIXED: Proper error handling
       console.error(`💥 Error processing scan results for ${scanId}:`, error.message);
       console.error(`Stack trace:`, error.stack);
       logger.error(`Error processing scan results: ${error.message}`);

@@ -1,11 +1,12 @@
-// src/scanners/clangTidyScanner.js - FIXED PATH ISSUE
+// src/scanners/clangTidyScanner.js - FIXED TOOL NAME
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs-extra');
 
 class ClangTidyScanner {
   constructor() {
-    this.name = 'clangtidy';
+    // FIXED: Use camelCase tool name to match database enum
+    this.name = 'clangTidy'; // Changed from 'clangtidy' to 'clangTidy'
     this.config = { path: '/usr/bin/clang-tidy' };
   }
 
@@ -18,94 +19,86 @@ class ClangTidyScanner {
   }
 
   async scanDirectory(directory, outputPath) {
-    // console.log('ClangTidy scanning:', directory);
-    
     try {
       fs.ensureDirSync(path.dirname(outputPath));
       
       // ABSOLUTE PATH để tránh confusion
       const absoluteDir = path.resolve(directory);
-      // console.log('Absolute directory:', absoluteDir);
       
       // Find C files
       const files = fs.readdirSync(absoluteDir).filter(f => f.endsWith('.c') || f.endsWith('.cpp'));
-      // console.log('Found files:', files);
       
       if (files.length === 0) {
-        fs.writeFileSync(outputPath, JSON.stringify({scanner: 'clangtidy', issues: []}));
-        return {scanner: 'clangtidy', vulnerabilities: [], summary: {total: 0, high: 0, medium: 0, low: 0}};
+        fs.writeFileSync(outputPath, JSON.stringify({scanner: 'clangTidy', issues: []}));
+        return {scanner: 'clangTidy', vulnerabilities: [], summary: {total: 0, high: 0, medium: 0, low: 0}};
       }
       
       const allIssues = [];
       
       for (const file of files) {
         const absoluteFilePath = path.join(absoluteDir, file);
-        // console.log(`\nScanning: ${file}`);
-        // console.log(`Full path: ${absoluteFilePath}`);
-        // console.log(`File exists: ${fs.existsSync(absoluteFilePath)}`);
         
         // CHẠY TỪ ROOT DIRECTORY, không phải từ uploads directory
         const command = `clang-tidy "${absoluteFilePath}"`;
-        // console.log(`Running: ${command}`);
-        // console.log(`Working dir: ${process.cwd()}`);
         
         try {
           const { stdout, stderr } = await this.runCommand(command, process.cwd());
           const output = stdout + stderr;
           
-          // console.log('=== RAW OUTPUT ===');
-          // console.log(output);
-          // console.log('=== END OUTPUT ===');
-          
           // Parse issues from output
           this.parseIssues(output, file, allIssues);
           
         } catch (error) {
-          // console.log('Command failed but checking output...');
           const output = error.stdout + error.stderr;
-          
-          // console.log('=== ERROR OUTPUT ===');
-          // console.log(output);
-          // console.log('=== END ERROR OUTPUT ===');
           
           // Parse issues from error output too
           this.parseIssues(output, file, allIssues);
         }
       }
       
-      console.log(`\nTotal issues found: ${allIssues.length}`);
+      console.log(`\n✅ CLANGTIDY SCAN COMPLETED`);
+      console.log(`ClangTidy found ${allIssues.length} total issues`);
       
       // Save to JSON
       const result = {
-        scanner: 'clangtidy',
+        scanner: 'clangTidy', // FIXED: Use camelCase
         timestamp: new Date().toISOString(),
         totalIssues: allIssues.length,
         issues: allIssues
       };
       
       fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
-      // console.log('Results saved to:', outputPath);
       
       // Format for service
       const vulnerabilities = allIssues.map(issue => ({
-        name: 'ClangTidy Issue',
+        name: issue.message || 'ClangTidy Issue',
         severity: issue.level === 'error' ? 'high' : 'medium',
         type: this.getIssueType(issue.message),
-        tool: 'clangtidy',
+        tool: 'clangTidy', // FIXED: Use camelCase to match database enum
         file: {
           fileName: issue.file,
           filePath: issue.file,
           fileExt: path.extname(issue.file)
         },
         location: { line: issue.line, column: issue.column || 1 },
-        description: issue.message,
-        codeSnippet: { line: '', before: [], after: [] },
+        description: issue.message || 'No description provided',
+        codeSnippet: { 
+          line: 'Code snippet not available', // FIXED: Provide default value
+          before: [], 
+          after: [] 
+        },
         remediation: { description: this.getRemediation(issue.message) },
+        references: [ // FIXED: Provide as string array
+          'https://clang.llvm.org/extra/clang-tidy/',
+          'https://clang.llvm.org/extra/clang-tidy/checks/list.html'
+        ],
         status: 'open'
       }));
       
+      console.log(`📊 ClangTidy Summary: Total=${vulnerabilities.length}, High=${vulnerabilities.filter(v => v.severity === 'high').length}, Medium=${vulnerabilities.filter(v => v.severity === 'medium').length}`);
+      
       return {
-        scanner: 'clangtidy',
+        scanner: 'clangTidy', // FIXED: Use camelCase
         vulnerabilities,
         summary: {
           total: vulnerabilities.length,
@@ -118,7 +111,7 @@ class ClangTidyScanner {
       
     } catch (error) {
       console.error('ClangTidy error:', error);
-      return {scanner: 'clangtidy', vulnerabilities: [], summary: {total: 0, high: 0, medium: 0, low: 0}};
+      return {scanner: 'clangTidy', vulnerabilities: [], summary: {total: 0, high: 0, medium: 0, low: 0}};
     }
   }
   
@@ -134,8 +127,6 @@ class ClangTidyScanner {
           !line.includes('Error reading configuration') &&
           line.includes(fileName)) {
         
-        // console.log('FOUND REAL ISSUE:', line);
-        
         // Parse: filename.c:line:col: level: message
         const match = line.match(/([^:]+):(\d+):(\d+):\s+(warning|error):\s+(.+)/);
         
@@ -149,8 +140,6 @@ class ClangTidyScanner {
             level: level,
             message: message.trim()
           });
-          
-          // console.log('Added issue:', {file: fileName, line: lineNum, message: message.trim()});
         }
       }
     }

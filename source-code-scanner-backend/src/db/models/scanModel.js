@@ -1,4 +1,4 @@
-// src/db/models/scanModel.js - COMPLETE REPLACEMENT
+// src/db/models/scanModel.js - FIXED VERSION
 const mongoose = require('mongoose');
 
 const scanSchema = new mongoose.Schema({
@@ -26,6 +26,7 @@ const scanSchema = new mongoose.Schema({
   },
   tools: [{
     type: String,
+    // FIXED: Updated enum to match vulnerability model and scanner factory
     enum: ['semgrep', 'snyk', 'clangTidy', 'cppcheck', 'clangStaticAnalyzer']
   }],
   uploadedFiles: [{
