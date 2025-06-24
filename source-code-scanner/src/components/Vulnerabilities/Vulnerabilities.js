@@ -57,6 +57,7 @@ import {
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { InsertDriveFile as InsertDriveFileIcon } from '@mui/icons-material';
+
 const VulnerabilitiesPage = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -287,200 +288,198 @@ const VulnerabilitiesPage = () => {
     }
   };
 
-  // Fixed handleViewCode function in Vulnerabilities.js
-
-const handleViewCode = async (vulnerability) => {
-  try {
-    // Show loading state
-    setCodeDialog({
-      open: true,
-      vulnerability,
-      code: 'Loading code snippet...',
-    });
-
-    // Get the vulnerability ID
-    const vulnId = vulnerability._id || vulnerability.id;
-    if (!vulnId) {
-      throw new Error('Vulnerability ID not found');
-    }
-
-    console.log('🔍 Fetching code snippet for vulnerability:', vulnId);
-
-    // Method 1: Try dedicated code snippet endpoint
-    let response;
-    let codeContent = '';
-    
+  const handleViewCode = async (vulnerability) => {
     try {
-      response = await fetch(`/api/vulnerabilities/${vulnId}/code-snippet?context=5`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
+      // Show loading state
+      setCodeDialog({
+        open: true,
+        vulnerability,
+        code: 'Loading code snippet...',
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        codeContent = data.data?.content || data.content || '';
-        console.log('✅ Got code from dedicated endpoint');
-      } else {
-        console.log('❌ Dedicated endpoint failed:', response.status);
+      // Get the vulnerability ID
+      const vulnId = vulnerability._id || vulnerability.id;
+      if (!vulnId) {
+        throw new Error('Vulnerability ID not found');
       }
-    } catch (err) {
-      console.log('❌ Dedicated endpoint error:', err.message);
-    }
 
-    // Method 2: If no dedicated endpoint, try to get from scan files
-    if (!codeContent) {
+      console.log('🔍 Fetching code snippet for vulnerability:', vulnId);
+
+      // Method 1: Try dedicated code snippet endpoint
+      let response;
+      let codeContent = '';
+      
       try {
-        // Get vulnerability details first
-        const vulnResponse = await fetch(`/api/vulnerabilities/${vulnId}`, {
+        response = await fetch(`/api/vulnerabilities/${vulnId}/code-snippet?context=5`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
           },
         });
 
-        if (vulnResponse.ok) {
-          const vulnData = await vulnResponse.json();
-          const vuln = vulnData.data || vulnData;
-          
-          // Extract file info
-          const fileName = typeof vuln.file === 'object' 
-            ? (vuln.file.fileName || vuln.file.name)
-            : vuln.file;
-          const lineNumber = typeof vuln.location === 'object'
-            ? vuln.location.line
-            : vuln.line;
+        if (response.ok) {
+          const data = await response.json();
+          codeContent = data.data?.content || data.content || '';
+          console.log('✅ Got code from dedicated endpoint');
+        } else {
+          console.log('❌ Dedicated endpoint failed:', response.status);
+        }
+      } catch (err) {
+        console.log('❌ Dedicated endpoint error:', err.message);
+      }
 
-          if (fileName && lineNumber) {
-            // Try to get the file content from scan
-            const scanId = vuln.scanId || vuln.scan;
-            if (scanId) {
-              const fileResponse = await fetch(`/api/scans/${scanId}/files/${encodeURIComponent(fileName)}?line=${lineNumber}&context=5`, {
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                },
-              });
+      // Method 2: If no dedicated endpoint, try to get from scan files
+      if (!codeContent) {
+        try {
+          // Get vulnerability details first
+          const vulnResponse = await fetch(`/api/vulnerabilities/${vulnId}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+          });
 
-              if (fileResponse.ok) {
-                const fileData = await fileResponse.json();
-                codeContent = fileData.data?.content || fileData.content || '';
-                console.log('✅ Got code from scan files');
+          if (vulnResponse.ok) {
+            const vulnData = await vulnResponse.json();
+            const vuln = vulnData.data || vulnData;
+            
+            // Extract file info
+            const fileName = typeof vuln.file === 'object' 
+              ? (vuln.file.fileName || vuln.file.name)
+              : vuln.file;
+            const lineNumber = typeof vuln.location === 'object'
+              ? vuln.location.line
+              : vuln.line;
+
+            if (fileName && lineNumber) {
+              // Try to get the file content from scan
+              const scanId = vuln.scanId || vuln.scan;
+              if (scanId) {
+                const fileResponse = await fetch(`/api/scans/${scanId}/files/${encodeURIComponent(fileName)}?line=${lineNumber}&context=5`, {
+                  headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                  },
+                });
+
+                if (fileResponse.ok) {
+                  const fileData = await fileResponse.json();
+                  codeContent = fileData.data?.content || fileData.content || '';
+                  console.log('✅ Got code from scan files');
+                }
               }
             }
           }
+        } catch (err) {
+          console.log('❌ Scan files method error:', err.message);
         }
-      } catch (err) {
-        console.log('❌ Scan files method error:', err.message);
       }
-    }
 
-    // Method 3: Generate mock code snippet if still no content
-    if (!codeContent) {
-      const fileName = typeof vulnerability.file === 'object' 
-        ? (vulnerability.file.fileName || vulnerability.file.name || 'unknown.c')
-        : (vulnerability.file || 'unknown.c');
-      const lineNumber = typeof vulnerability.location === 'object'
-        ? vulnerability.location.line
-        : (vulnerability.line || 33);
+      // Method 3: Generate mock code snippet if still no content
+      if (!codeContent) {
+        const fileName = typeof vulnerability.file === 'object' 
+          ? (vulnerability.file.fileName || vulnerability.file.name || 'unknown.c')
+          : (vulnerability.file || 'unknown.c');
+        const lineNumber = typeof vulnerability.location === 'object'
+          ? vulnerability.location.line
+          : (vulnerability.line || 33);
+        
+        codeContent = generateMockCodeSnippet(fileName, lineNumber, vulnerability);
+        console.log('⚠️ Using mock code snippet');
+      }
+
+      // Update dialog with actual code
+      setCodeDialog({
+        open: true,
+        vulnerability,
+        code: codeContent,
+      });
+
+    } catch (error) {
+      console.error('❌ Error loading code snippet:', error);
       
-      codeContent = generateMockCodeSnippet(fileName, lineNumber, vulnerability);
-      console.log('⚠️ Using mock code snippet');
-    }
-
-    // Update dialog with actual code
-    setCodeDialog({
-      open: true,
-      vulnerability,
-      code: codeContent,
-    });
-
-  } catch (error) {
-    console.error('❌ Error loading code snippet:', error);
-    
-    // Show error in dialog
-    setCodeDialog({
-      open: true,
-      vulnerability,
-      code: `Error loading code snippet: ${error.message}\n\nPlease check:\n1. File exists in scan results\n2. Backend API is accessible\n3. Vulnerability has valid file/line information`,
-    });
-    
-    setError(`Failed to load code: ${error.message}`);
-  }
-  
-  handleMenuClose();
-};
-
-// Helper function to generate realistic mock code
-const generateMockCodeSnippet = (fileName, lineNumber, vulnerability) => {
-  const startLine = Math.max(1, lineNumber - 5);
-  const endLine = lineNumber + 5;
-  
-  // Generate realistic C code based on vulnerability type
-  const mockLines = [];
-  
-  for (let i = startLine; i <= endLine; i++) {
-    let line = '';
-    
-    if (i === lineNumber) {
-      // This is the problematic line - make it relevant to the vulnerability
-      const vulnType = vulnerability.name || vulnerability.title || '';
+      // Show error in dialog
+      setCodeDialog({
+        open: true,
+        vulnerability,
+        code: `Error loading code snippet: ${error.message}\n\nPlease check:\n1. File exists in scan results\n2. Backend API is accessible\n3. Vulnerability has valid file/line information`,
+      });
       
-      if (vulnType.includes('double_free') || vulnType.includes('free')) {
-        line = '    free(ptr);  // ⚠️ Potential double free vulnerability';
-      } else if (vulnType.includes('buffer') || vulnType.includes('overflow')) {
-        line = '    strcpy(buffer, input);  // ⚠️ Buffer overflow vulnerability';
-      } else if (vulnType.includes('memory') || vulnType.includes('leak')) {
-        line = '    ptr = malloc(size);  // ⚠️ Memory leak - not freed';
-      } else if (vulnType.includes('static') || vulnType.includes('linkage')) {
-        line = 'double_free() {  // ⚠️ Should have static linkage';
+      setError(`Failed to load code: ${error.message}`);
+    }
+    
+    handleMenuClose();
+  };
+
+  // Helper function to generate realistic mock code
+  const generateMockCodeSnippet = (fileName, lineNumber, vulnerability) => {
+    const startLine = Math.max(1, lineNumber - 5);
+    const endLine = lineNumber + 5;
+    
+    // Generate realistic C code based on vulnerability type
+    const mockLines = [];
+    
+    for (let i = startLine; i <= endLine; i++) {
+      let line = '';
+      
+      if (i === lineNumber) {
+        // This is the problematic line - make it relevant to the vulnerability
+        const vulnType = vulnerability.name || vulnerability.title || '';
+        
+        if (vulnType.includes('double_free') || vulnType.includes('free')) {
+          line = '    free(ptr);  // ⚠️ Potential double free vulnerability';
+        } else if (vulnType.includes('buffer') || vulnType.includes('overflow')) {
+          line = '    strcpy(buffer, input);  // ⚠️ Buffer overflow vulnerability';
+        } else if (vulnType.includes('memory') || vulnType.includes('leak')) {
+          line = '    ptr = malloc(size);  // ⚠️ Memory leak - not freed';
+        } else if (vulnType.includes('static') || vulnType.includes('linkage')) {
+          line = 'double_free() {  // ⚠️ Should have static linkage';
+        } else {
+          line = '    // ⚠️ Vulnerability detected on this line';
+        }
       } else {
-        line = '    // ⚠️ Vulnerability detected on this line';
+        // Generate context lines
+        const contextLines = [
+          '#include <stdio.h>',
+          '#include <stdlib.h>',
+          '#include <string.h>',
+          '',
+          'void process_data(char* input) {',
+          '    char buffer[256];',
+          '    char* ptr = NULL;',
+          '    size_t size = strlen(input);',
+          '    ',
+          '    if (size > 0) {',
+          '        ptr = malloc(size + 1);',
+          '        if (ptr != NULL) {',
+          '            strncpy(ptr, input, size);',
+          '            ptr[size] = \'\\0\';',
+          '        }',
+          '    }',
+          '    ',
+          '    // Process the data',
+          '    process_buffer(buffer);',
+          '    ',
+          '    // Cleanup',
+          '    if (ptr) {',
+          '        free(ptr);',
+          '        ptr = NULL;',
+          '    }',
+          '}',
+          '',
+          'static void helper_function() {',
+          '    // Helper implementation',
+          '    return;',
+          '}',
+        ];
+        
+        const contextIndex = (i - startLine) % contextLines.length;
+        line = contextLines[contextIndex];
       }
-    } else {
-      // Generate context lines
-      const contextLines = [
-        '#include <stdio.h>',
-        '#include <stdlib.h>',
-        '#include <string.h>',
-        '',
-        'void process_data(char* input) {',
-        '    char buffer[256];',
-        '    char* ptr = NULL;',
-        '    size_t size = strlen(input);',
-        '    ',
-        '    if (size > 0) {',
-        '        ptr = malloc(size + 1);',
-        '        if (ptr != NULL) {',
-        '            strncpy(ptr, input, size);',
-        '            ptr[size] = \'\\0\';',
-        '        }',
-        '    }',
-        '    ',
-        '    // Process the data',
-        '    process_buffer(buffer);',
-        '    ',
-        '    // Cleanup',
-        '    if (ptr) {',
-        '        free(ptr);',
-        '        ptr = NULL;',
-        '    }',
-        '}',
-        '',
-        'static void helper_function() {',
-        '    // Helper implementation',
-        '    return;',
-        '}',
-      ];
       
-      const contextIndex = (i - startLine) % contextLines.length;
-      line = contextLines[contextIndex];
+      mockLines.push(`${i.toString().padStart(3, ' ')}: ${line}`);
     }
     
-    mockLines.push(`${i.toString().padStart(3, ' ')}: ${line}`);
-  }
-  
-  return mockLines.join('\n');
-};
+    return mockLines.join('\n');
+  };
 
   const handleExportCSV = () => {
     try {
@@ -888,62 +887,12 @@ const generateMockCodeSnippet = (fileName, lineNumber, vulnerability) => {
       )}
     </Paper>
   );
-  //   <Paper sx={{ p: 3 }}>
-  //     <Typography variant="h6" gutterBottom>
-  //       Code View
-  //     </Typography>
-  //     <Typography variant="body2" color="text.secondary" paragraph>
-  //       Select "View Code" from the actions menu in the List View to see code snippets for vulnerabilities.
-  //     </Typography>
-      
-  //     {vulnerabilities.length > 0 && (
-  //       <Box sx={{ mt: 3 }}>
-  //         <Typography variant="subtitle1" gutterBottom>
-  //           Available Vulnerabilities:
-  //         </Typography>
-  //         {vulnerabilities.map((vuln) => (
-  //           <Accordion key={vuln._id}>
-  //             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-  //               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-  //                 <Chip
-  //                   icon={getSeverityIcon(vuln.severity)}
-  //                   label={vuln.severity?.toUpperCase()}
-  //                   color={getSeverityColor(vuln.severity)}
-  //                   size="small"
-  //                 />
-  //                 <Typography sx={{ flexGrow: 1 }}>
-  //                   {vuln.name} in {vuln.file?.fileName} (Line {vuln.location?.line})
-  //                 </Typography>
-  //                 <Chip size="small" label={vuln.tool} />
-  //               </Box>
-  //             </AccordionSummary>
-  //             <AccordionDetails>
-  //               <Typography variant="body2" paragraph>
-  //                 <strong>Description:</strong> {vuln.description || 'No description available'}
-  //               </Typography>
-  //               <Button 
-  //                 variant="outlined" 
-  //                 onClick={() => handleViewCode(vuln)}
-  //                 startIcon={<CodeIcon />}
-  //               >
-  //                 Load Code Snippet
-  //               </Button>
-  //             </AccordionDetails>
-  //           </Accordion>
-  //         ))}
-  //       </Box>
-  //     )}
-  //   </Paper>
-  // );
+
   const renderCodeViewTab = () => (
     <Paper sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
         Code View
-      </Typography>
-      <Typography variant="body2" color="text.secondary" paragraph>
-        Select "View Code" from the actions menu in the List View to see code snippets for vulnerabilities.
-      </Typography>
-      
+      </Typography>   
       {vulnerabilities.length > 0 && (
         <Box sx={{ mt: 3 }}>
           <Typography variant="subtitle1" gutterBottom>
@@ -978,8 +927,8 @@ const generateMockCodeSnippet = (fileName, lineNumber, vulnerability) => {
                 </Box>
               </AccordionSummary>
               <AccordionDetails>
-                {/* FIX: Safely render description */}
-                <Typography variant="body2" paragraph>
+                {/* FIX: Use component="div" to avoid <p> containing <div> */}
+                <Typography component="div" variant="body2" sx={{ mb: 2 }}>
                   <strong>Description:</strong> {
                     typeof vuln.description === 'string' 
                       ? vuln.description 
@@ -989,7 +938,7 @@ const generateMockCodeSnippet = (fileName, lineNumber, vulnerability) => {
                 
                 {/* FIX: Additional safe rendering for other fields */}
                 {vuln.cwe && (
-                  <Typography variant="body2" paragraph>
+                  <Typography component="div" variant="body2" sx={{ mb: 2 }}>
                     <strong>CWE:</strong> {
                       typeof vuln.cwe === 'string' 
                         ? vuln.cwe 
@@ -999,7 +948,7 @@ const generateMockCodeSnippet = (fileName, lineNumber, vulnerability) => {
                 )}
                 
                 {vuln.remediation && (
-                  <Typography variant="body2" paragraph>
+                  <Typography component="div" variant="body2" sx={{ mb: 2 }}>
                     <strong>Remediation:</strong> {
                       typeof vuln.remediation === 'string' 
                         ? vuln.remediation 
@@ -1202,6 +1151,8 @@ const generateMockCodeSnippet = (fileName, lineNumber, vulnerability) => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Code View Dialog - FIXED HTML Structure */}
       <Dialog 
         open={codeDialog.open} 
         onClose={() => setCodeDialog({ open: false, vulnerability: null, code: '' })} 
@@ -1353,7 +1304,7 @@ const generateMockCodeSnippet = (fileName, lineNumber, vulnerability) => {
             </Box>
           </Paper>
           
-          {/* Vulnerability Details Panel */}
+          {/* Vulnerability Details Panel - FIXED */}
           {codeDialog.vulnerability && (
             <Paper elevation={1} sx={{ p: 2, bgcolor: 'background.default' }}>
               <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1363,59 +1314,76 @@ const generateMockCodeSnippet = (fileName, lineNumber, vulnerability) => {
               
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
-                  <Typography variant="body2" paragraph>
-                    <strong>Name:</strong> {codeDialog.vulnerability.name || codeDialog.vulnerability.title || 'Unknown'}
-                  </Typography>
-                  <Typography variant="body2" paragraph>
-                    <strong>Severity:</strong> 
+                  {/* FIX: Use Box container instead of Typography paragraph */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography component="span" variant="body2">
+                      <strong>Name:</strong> {codeDialog.vulnerability.name || codeDialog.vulnerability.title || 'Unknown'}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography component="span" variant="body2">
+                      <strong>Severity:</strong>
+                    </Typography>
                     <Chip 
                       size="small" 
                       label={codeDialog.vulnerability.severity?.toUpperCase() || 'UNKNOWN'}
                       color={getSeverityColor(codeDialog.vulnerability.severity)}
-                      sx={{ ml: 1 }}
                     />
-                  </Typography>
-                  <Typography variant="body2" paragraph>
-                    <strong>Tool:</strong> {codeDialog.vulnerability.tool || 'Unknown'}
-                  </Typography>
+                  </Box>
+                  
+                  <Box sx={{ mb: 2 }}>
+                    <Typography component="span" variant="body2">
+                      <strong>Tool:</strong> {codeDialog.vulnerability.tool || 'Unknown'}
+                    </Typography>
+                  </Box>
                 </Grid>
                 
                 <Grid item xs={12} md={6}>
-                  <Typography variant="body2" paragraph>
-                    <strong>Type:</strong> {codeDialog.vulnerability.type || codeDialog.vulnerability.vulnerabilityType || 'Unknown'}
-                  </Typography>
-                  {codeDialog.vulnerability.cwe && (
-                    <Typography variant="body2" paragraph>
-                      <strong>CWE:</strong> 
-                      <a 
-                        href={`https://cwe.mitre.org/data/definitions/${codeDialog.vulnerability.cwe.replace('CWE-', '')}.html`}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{ marginLeft: '4px', color: '#1976d2' }}
-                      >
-                        {codeDialog.vulnerability.cwe}
-                      </a>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography component="span" variant="body2">
+                      <strong>Type:</strong> {codeDialog.vulnerability.type || codeDialog.vulnerability.vulnerabilityType || 'Unknown'}
                     </Typography>
+                  </Box>
+                  
+                  {codeDialog.vulnerability.cwe && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography component="span" variant="body2">
+                        <strong>CWE:</strong>{' '}
+                        <a 
+                          href={`https://cwe.mitre.org/data/definitions/${codeDialog.vulnerability.cwe.replace('CWE-', '')}.html`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{ color: '#1976d2' }}
+                        >
+                          {codeDialog.vulnerability.cwe}
+                        </a>
+                      </Typography>
+                    </Box>
                   )}
                 </Grid>
               </Grid>
               
-              <Typography variant="body2" paragraph sx={{ mt: 2 }}>
-                <strong>Description:</strong> {
-                  typeof codeDialog.vulnerability.description === 'string'
-                    ? codeDialog.vulnerability.description
-                    : 'No description available'
-                }
-              </Typography>
-              
-              {codeDialog.vulnerability.remediation && (
-                <Typography variant="body2" paragraph>
-                  <strong>Remediation:</strong> {
-                    typeof codeDialog.vulnerability.remediation === 'string'
-                      ? codeDialog.vulnerability.remediation
-                      : 'See vulnerability documentation'
+              <Box sx={{ mt: 2 }}>
+                <Typography component="div" variant="body2">
+                  <strong>Description:</strong> {
+                    typeof codeDialog.vulnerability.description === 'string'
+                      ? codeDialog.vulnerability.description
+                      : 'No description available'
                   }
                 </Typography>
+              </Box>
+              
+              {codeDialog.vulnerability.remediation && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography component="div" variant="body2">
+                    <strong>Remediation:</strong> {
+                      typeof codeDialog.vulnerability.remediation === 'string'
+                        ? codeDialog.vulnerability.remediation
+                        : 'See vulnerability documentation'
+                    }
+                  </Typography>
+                </Box>
               )}
               
               {codeDialog.vulnerability.references && codeDialog.vulnerability.references.length > 0 && (

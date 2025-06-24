@@ -1,576 +1,170 @@
-// import React, { useState } from 'react';
-// import {
-//   Box,
-//   Typography,
-//   Paper,
-//   Tabs,
-//   Tab,
-//   Table,
-//   TableBody,
-//   TableCell,
-//   TableContainer,
-//   TableHead,
-//   TableRow,
-//   Chip,
-//   IconButton,
-//   Button,
-//   Grid,
-//   Divider,
-//   Card,
-//   CardContent,
-//   Accordion,
-//   AccordionSummary,
-//   AccordionDetails,
-// } from '@mui/material';
-// import {
-//   ExpandMore as ExpandMoreIcon,
-//   BugReport as BugIcon,
-//   Error as ErrorIcon,
-//   Warning as WarningIcon,
-//   Info as InfoIcon,
-//   Code as CodeIcon,
-//   Assignment as AssignmentIcon,
-//   Description as DescriptionIcon,
-//   Save as SaveIcon,
-//   Print as PrintIcon,
-//   Share as ShareIcon,
-// } from '@mui/icons-material';
-// import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-
-// // Mock data for demonstration
-// const mockVulnerabilities = [
-//   { id: 1, name: 'Buffer Overflow', severity: 'high', type: 'Memory Safety', file: 'main.cpp', line: 42, column: 15, tool: 'semgrep', status: 'open', description: 'Potential buffer overflow vulnerability detected. Missing bounds check before memory access.' },
-//   { id: 2, name: 'Memory Leak', severity: 'medium', type: 'Memory Safety', file: 'utils.c', line: 87, column: 10, tool: 'clangtidy', status: 'open', description: 'Memory allocated but never freed, causing memory leak.' },
-//   { id: 3, name: 'Use After Free', severity: 'high', type: 'Memory Safety', file: 'parser.cpp', line: 124, column: 8, tool: 'snyk', status: 'in_progress', description: 'Accessing memory after it has been freed.' },
-//   { id: 4, name: 'Uninitialized Variable', severity: 'low', type: 'Code Quality', file: 'config.c', line: 32, column: 20, tool: 'semgrep', status: 'open', description: 'Variable may be used before initialization.' },
-//   { id: 5, name: 'Integer Overflow', severity: 'medium', type: 'Security', file: 'math.cpp', line: 74, column: 12, tool: 'clangtidy', status: 'fixed', description: 'Potential integer overflow when performing arithmetic operation.' },
-//   { id: 6, name: 'Format String Vulnerability', severity: 'critical', type: 'Security', file: 'logger.c', line: 53, column: 5, tool: 'snyk', status: 'open', description: 'Format string vulnerability that could lead to arbitrary code execution.' },
-//   { id: 7, name: 'Redundant Code', severity: 'low', type: 'Code Quality', file: 'helpers.cpp', line: 91, column: 3, tool: 'semgrep', status: 'ignored', description: 'Redundant code detected that has no effect.' },
-// ];
-
-// // Prepare data for charts
-// const severityCounts = {
-//   critical: mockVulnerabilities.filter(v => v.severity === 'critical').length,
-//   high: mockVulnerabilities.filter(v => v.severity === 'high').length,
-//   medium: mockVulnerabilities.filter(v => v.severity === 'medium').length,
-//   low: mockVulnerabilities.filter(v => v.severity === 'low').length,
-// };
-
-// const toolCounts = {
-//   semgrep: mockVulnerabilities.filter(v => v.tool === 'semgrep').length,
-//   snyk: mockVulnerabilities.filter(v => v.tool === 'snyk').length,
-//   clangtidy: mockVulnerabilities.filter(v => v.tool === 'clangtidy').length,
-// };
-
-// const pieChartData = [
-//   { name: 'Critical', value: severityCounts.critical, color: '#d32f2f' },
-//   { name: 'High', value: severityCounts.high, color: '#f44336' },
-//   { name: 'Medium', value: severityCounts.medium, color: '#ff9800' },
-//   { name: 'Low', value: severityCounts.low, color: '#4caf50' },
-// ];
-
-// const barChartData = [
-//   { name: 'Semgrep', value: toolCounts.semgrep },
-//   { name: 'Snyk', value: toolCounts.snyk },
-//   { name: 'ClangTidy', value: toolCounts.clangtidy },
-// ];
-
-// const getSeverityColor = (severity) => {
-//   switch (severity.toLowerCase()) {
-//     case 'critical':
-//       return 'error';
-//     case 'high':
-//       return 'error';
-//     case 'medium':
-//       return 'warning';
-//     case 'low':
-//       return 'success';
-//     default:
-//       return 'default';
-//   }
-// };
-
-// const getSeverityIcon = (severity) => {
-//   switch (severity.toLowerCase()) {
-//     case 'critical':
-//     case 'high':
-//       return <ErrorIcon />;
-//     case 'medium':
-//       return <WarningIcon />;
-//     case 'low':
-//       return <InfoIcon />;
-//     default:
-//       return <InfoIcon />;
-//   }
-// };
-
-// const ScanResults = () => {
-//   const [tabValue, setTabValue] = useState(0);
-
-//   const handleTabChange = (event, newValue) => {
-//     setTabValue(newValue);
-//   };
-
-//   return (
-//     <Box>
-//       <Paper sx={{ p: 3, mb: 4 }}>
-//         <Typography variant="h5" gutterBottom>
-//           Scan Completed
-//         </Typography>
-//         <Grid container spacing={3}>
-//           <Grid item xs={12} md={6}>
-//             <Typography variant="body1">
-//               <strong>Scan Date:</strong> {new Date().toLocaleString()}
-//             </Typography>
-//             <Typography variant="body1">
-//               <strong>Files Scanned:</strong> 42
-//             </Typography>
-//             <Typography variant="body1">
-//               <strong>Tools Used:</strong> semgrep, snyk, clangtidy
-//             </Typography>
-//           </Grid>
-//           <Grid item xs={12} md={6}>
-//             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-//               <Button startIcon={<SaveIcon />} variant="outlined">
-//                 Save
-//               </Button>
-//               <Button startIcon={<PrintIcon />} variant="outlined">
-//                 Print
-//               </Button>
-//               <Button startIcon={<ShareIcon />} variant="outlined">
-//                 Share
-//               </Button>
-//             </Box>
-//           </Grid>
-//         </Grid>
-//       </Paper>
-
-//       <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 3 }}>
-//         <Tab label="Overview" icon={<AssignmentIcon />} iconPosition="start" />
-//         <Tab label="Vulnerabilities" icon={<BugIcon />} iconPosition="start" />
-//         <Tab label="Code View" icon={<CodeIcon />} iconPosition="start" />
-//         <Tab label="Detailed Report" icon={<DescriptionIcon />} iconPosition="start" />
-//       </Tabs>
-
-//       {tabValue === 0 && (
-//         <Grid container spacing={3}>
-//           <Grid item xs={12} md={6}>
-//             <Card sx={{ height: '100%' }}>
-//               <CardContent>
-//                 <Typography variant="h6" gutterBottom>
-//                   Vulnerabilities by Severity
-//                 </Typography>
-//                 <ResponsiveContainer width="100%" height={300}>
-//                   <PieChart>
-//                     <Pie
-//                       data={pieChartData}
-//                       cx="50%"
-//                       cy="50%"
-//                       outerRadius={100}
-//                       fill="#8884d8"
-//                       dataKey="value"
-//                       label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-//                     >
-//                       {pieChartData.map((entry, index) => (
-//                         <Cell key={`cell-${index}`} fill={entry.color} />
-//                       ))}
-//                     </Pie>
-//                     <Tooltip formatter={(value) => [value, 'Issues']} />
-//                     <Legend />
-//                   </PieChart>
-//                 </ResponsiveContainer>
-//               </CardContent>
-//             </Card>
-//           </Grid>
-          
-//           <Grid item xs={12} md={6}>
-//             <Card sx={{ height: '100%' }}>
-//               <CardContent>
-//                 <Typography variant="h6" gutterBottom>
-//                   Issues by Tool
-//                 </Typography>
-//                 <ResponsiveContainer width="100%" height={300}>
-//                   <BarChart data={barChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-//                     <CartesianGrid strokeDasharray="3 3" />
-//                     <XAxis dataKey="name" />
-//                     <YAxis />
-//                     <Tooltip />
-//                     <Legend />
-//                     <Bar dataKey="value" name="Issues Found" fill="#8884d8" />
-//                   </BarChart>
-//                 </ResponsiveContainer>
-//               </CardContent>
-//             </Card>
-//           </Grid>
-          
-//           <Grid item xs={12}>
-//             <Card>
-//               <CardContent>
-//                 <Typography variant="h6" gutterBottom>
-//                   Summary
-//                 </Typography>
-//                 <Grid container spacing={2}>
-//                   <Grid item xs={6} sm={3}>
-//                     <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#d32f2f', color: 'white' }}>
-//                       <Typography variant="h3">{severityCounts.critical}</Typography>
-//                       <Typography variant="subtitle2">Critical</Typography>
-//                     </Paper>
-//                   </Grid>
-//                   <Grid item xs={6} sm={3}>
-//                     <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#f44336', color: 'white' }}>
-//                       <Typography variant="h3">{severityCounts.high}</Typography>
-//                       <Typography variant="subtitle2">High</Typography>
-//                     </Paper>
-//                   </Grid>
-//                   <Grid item xs={6} sm={3}>
-//                     <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#ff9800', color: 'white' }}>
-//                       <Typography variant="h3">{severityCounts.medium}</Typography>
-//                       <Typography variant="subtitle2">Medium</Typography>
-//                     </Paper>
-//                   </Grid>
-//                   <Grid item xs={6} sm={3}>
-//                     <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#4caf50', color: 'white' }}>
-//                       <Typography variant="h3">{severityCounts.low}</Typography>
-//                       <Typography variant="subtitle2">Low</Typography>
-//                     </Paper>
-//                   </Grid>
-//                 </Grid>
-//               </CardContent>
-//             </Card>
-//           </Grid>
-//         </Grid>
-//       )}
-      
-//       {tabValue === 1 && (
-//         <TableContainer component={Paper}>
-//           <Table>
-//             <TableHead>
-//               <TableRow>
-//                 <TableCell>Severity</TableCell>
-//                 <TableCell>Type</TableCell>
-//                 <TableCell>File</TableCell>
-//                 <TableCell>Line</TableCell>
-//                 <TableCell>Tool</TableCell>
-//                 <TableCell>Description</TableCell>
-//               </TableRow>
-//             </TableHead>
-//             <TableBody>
-//               {mockVulnerabilities.map((vuln) => (
-//                 <TableRow key={vuln.id} hover>
-//                   <TableCell>
-//                     <Chip
-//                       icon={getSeverityIcon(vuln.severity)}
-//                       label={vuln.severity.toUpperCase()}
-//                       color={getSeverityColor(vuln.severity)}
-//                       size="small"
-//                     />
-//                   </TableCell>
-//                   <TableCell>{vuln.type}</TableCell>
-//                   <TableCell>{vuln.file}</TableCell>
-//                   <TableCell>{vuln.line}:{vuln.column}</TableCell>
-//                   <TableCell>{vuln.tool}</TableCell>
-//                   <TableCell>{vuln.description}</TableCell>
-//                 </TableRow>
-//               ))}
-//             </TableBody>
-//           </Table>
-//         </TableContainer>
-//       )}
-      
-//       {tabValue === 2 && (
-//         <Paper sx={{ p: 3 }}>
-//           <Typography variant="h6" gutterBottom>
-//             Code View
-//           </Typography>
-//           <Typography variant="body2" color="text.secondary" paragraph>
-//             Select a vulnerability from the list to view the affected code.
-//           </Typography>
-          
-//           {mockVulnerabilities.map((vuln) => (
-//             <Accordion key={vuln.id}>
-//               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-//                 <Typography sx={{ width: '33%', flexShrink: 0 }}>
-//                   {vuln.file} (Line {vuln.line})
-//                 </Typography>
-//                 <Typography sx={{ color: 'text.secondary' }}>
-//                   {vuln.type} - {vuln.severity.toUpperCase()}
-//                 </Typography>
-//               </AccordionSummary>
-//               <AccordionDetails>
-//                 <Box
-//                   sx={{
-//                     p: 2,
-//                     backgroundColor: '#f5f5f5',
-//                     fontFamily: 'monospace',
-//                     borderRadius: 1,
-//                     overflowX: 'auto',
-//                   }}
-//                 >
-//                   <pre style={{ margin: 0 }}>
-//                     <code>
-//                       {/* This would be actual code in a real application */}
-//                       {`// Sample code for ${vuln.file}\n`}
-//                       {`39  void process_data(char* input, size_t size) {\n`}
-//                       {`40      char buffer[10];\n`}
-//                       {`41      // Dangerous operation below\n`}
-//                       {vuln.line === 42 ? (
-//                         <span style={{ backgroundColor: '#ffcccc', display: 'block' }}>
-//                           {`42      strcpy(buffer, input);  // Potential buffer overflow\n`}
-//                         </span>
-//                       ) : (
-//                         `42      strcpy(buffer, input);  // Potential buffer overflow\n`
-//                       )}
-//                       {`43      process_buffer(buffer);\n`}
-//                       {`44  }\n`}
-//                     </code>
-//                   </pre>
-//                 </Box>
-//                 <Box sx={{ mt: 2 }}>
-//                   <Typography variant="subtitle2" gutterBottom>
-//                     Fix Recommendation:
-//                   </Typography>
-//                   <Typography variant="body2">
-//                     {vuln.type === 'Buffer Overflow' 
-//                       ? 'Use strncpy() instead of strcpy() and ensure the buffer size is respected:'
-//                       : 'Ensure proper memory management and bounds checking:'}
-//                   </Typography>
-//                   <Box
-//                     sx={{
-//                       p: 2,
-//                       mt: 1,
-//                       backgroundColor: '#e8f5e9',
-//                       fontFamily: 'monospace',
-//                       borderRadius: 1,
-//                       overflowX: 'auto',
-//                     }}
-//                   >
-//                     <pre style={{ margin: 0 }}>
-//                       <code>
-//                         {vuln.type === 'Buffer Overflow' 
-//                           ? `strncpy(buffer, input, sizeof(buffer) - 1);\nbuffer[sizeof(buffer) - 1] = '\\0';  // Ensure null termination`
-//                           : `// Proper implementation would go here based on the specific issue`}
-//                       </code>
-//                     </pre>
-//                   </Box>
-//                 </Box>
-//               </AccordionDetails>
-//             </Accordion>
-//           ))}
-//         </Paper>
-//       )}
-      
-//       {tabValue === 3 && (
-//         <Paper sx={{ p: 3 }}>
-//           <Typography variant="h6" gutterBottom>
-//             Detailed Report
-//           </Typography>
-//           <Typography variant="body1" paragraph>
-//             This detailed report provides a comprehensive analysis of the security issues found in your codebase.
-//           </Typography>
-          
-//           <Box sx={{ mb: 4 }}>
-//             <Typography variant="subtitle1" gutterBottom>
-//               Executive Summary
-//             </Typography>
-//             <Typography variant="body2" paragraph>
-//               The scan identified a total of {mockVulnerabilities.length} security issues across your codebase.
-//               These include {severityCounts.critical} critical, {severityCounts.high} high, {severityCounts.medium} medium, 
-//               and {severityCounts.low} low severity issues. The most common types of vulnerabilities are buffer overflows, 
-//               memory leaks, and use-after-free errors, which suggest that memory management is a key area for improvement.
-//             </Typography>
-//           </Box>
-          
-//           <Divider sx={{ my: 3 }} />
-          
-//           <Box sx={{ mb: 4 }}>
-//             <Typography variant="subtitle1" gutterBottom>
-//               Vulnerability Categories
-//             </Typography>
-            
-//             <Accordion>
-//               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-//                 <Typography>Memory Safety Issues</Typography>
-//               </AccordionSummary>
-//               <AccordionDetails>
-//                 <Typography variant="body2" paragraph>
-//                   Memory safety issues are a category of vulnerabilities that occur when a program accesses memory 
-//                   locations in ways that are unintended or insecure. These issues include buffer overflows, 
-//                   use-after-free errors, and memory leaks.
-//                 </Typography>
-//                 <Typography variant="body2" paragraph>
-//                   In your codebase, we identified several memory safety issues, primarily in the file handlers 
-//                   and data processing components.
-//                 </Typography>
-//               </AccordionDetails>
-//             </Accordion>
-            
-//             <Accordion>
-//               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-//                 <Typography>Input Validation</Typography>
-//               </AccordionSummary>
-//               <AccordionDetails>
-//                 <Typography variant="body2" paragraph>
-//                   Input validation vulnerabilities occur when a program fails to properly validate or sanitize 
-//                   user-provided input before using it in sensitive operations.
-//                 </Typography>
-//                 <Typography variant="body2" paragraph>
-//                   The scan identified some instances where input validation is insufficient, particularly in 
-//                   file parsing routines.
-//                 </Typography>
-//               </AccordionDetails>
-//             </Accordion>
-//           </Box>
-          
-//           <Divider sx={{ my: 3 }} />
-          
-//           <Box>
-//             <Typography variant="subtitle1" gutterBottom>
-//               Remediation Recommendations
-//             </Typography>
-//             <Typography variant="body2" paragraph>
-//               1. Implement proper bounds checking for all buffer operations
-//             </Typography>
-//             <Typography variant="body2" paragraph>
-//               2. Use safer alternatives to dangerous functions (e.g., strncpy instead of strcpy)
-//             </Typography>
-//             <Typography variant="body2" paragraph>
-//               3. Ensure that all memory allocations are properly freed
-//             </Typography>
-//             <Typography variant="body2" paragraph>
-//               4. Add input validation for all user-provided data
-//             </Typography>
-//             <Typography variant="body2" paragraph>
-//               5. Consider using static analysis tools as part of your CI/CD pipeline
-//             </Typography>
-//           </Box>
-//         </Paper>
-//       )}
-//     </Box>
-//   );
-// };
-
-// export default ScanResults;
-
-
-// src/components/Scanner/ScanResults.js - FIXED VERSION
-import React, { useMemo } from 'react';
+// src/components/Scanner/ScanResults.js - Clean version với accordion code view
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Paper,
+  Tabs,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  Button,
   Grid,
   Card,
   CardContent,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Chip,
-  Divider,
   Alert,
-  IconButton,
-  Tabs,
-  Tab,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import {
-  CheckCircle,
+  BugReport as BugIcon,
   Error as ErrorIcon,
   Warning as WarningIcon,
   Info as InfoIcon,
-  BugReport as BugIcon,
-  Security as SecurityIcon,
+  Assignment as AssignmentIcon,
   Code as CodeIcon,
-  GetApp as DownloadIcon,
+  Description as DescriptionIcon,
+  CheckCircle as CheckCircleIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const ScanResults = ({ results, issuesFound, currentFile }) => {
-  // Debug logging
-  console.log('🎯 ScanResults component received:');
-  console.log('  - results:', results?.length || 0, 'items');
-  console.log('  - issuesFound:', issuesFound);
-  console.log('  - currentFile:', currentFile);
+  const [tabValue, setTabValue] = useState(0);
+  const [processedData, setProcessedData] = useState({
+    vulnerabilities: [],
+    severityCounts: { critical: 0, high: 0, medium: 0, low: 0 },
+    toolCounts: {},
+    totalCount: 0
+  });
 
-  // Process results to categorize by severity
-  const processedResults = useMemo(() => {
-    if (!results || !Array.isArray(results) || results.length === 0) {
-      return {
-        critical: [],
-        high: [],
-        medium: [],
-        low: [],
-        counts: { critical: 0, high: 0, medium: 0, low: 0, total: 0 }
-      };
+  // Data processing
+  useEffect(() => {
+    console.log('🎯 ScanResults processing data...');
+    console.log('Results:', results);
+    console.log('Issues found:', issuesFound);
+
+    let vulnerabilities = [];
+
+    if (Array.isArray(results)) {
+      vulnerabilities = results;
+    } else if (results && typeof results === 'object') {
+      if (Array.isArray(results.vulnerabilities)) {
+        vulnerabilities = results.vulnerabilities;
+      } else if (Array.isArray(results.issues)) {
+        vulnerabilities = results.issues;
+      } else if (Array.isArray(results.data)) {
+        vulnerabilities = results.data;
+      } else if (results.data && Array.isArray(results.data.vulnerabilities)) {
+        vulnerabilities = results.data.vulnerabilities;
+      }
     }
 
-    const categorized = { critical: [], high: [], medium: [], low: [] };
+    console.log('Processed vulnerabilities:', vulnerabilities.length);
 
-    results.forEach((result) => {
-      const severity = (result.severity || 'low').toLowerCase();
-      
-      switch (severity) {
-        case 'critical':
-        case 'error':
-          categorized.critical.push(result);
-          break;
-        case 'high':
-        case 'warning':
-          categorized.high.push(result);
-          break;
-        case 'medium':
-        case 'moderate':
-          categorized.medium.push(result);
-          break;
-        case 'low':
-        case 'info':
-        case 'note':
-        default:
-          categorized.low.push(result);
-          break;
+    // Count severities and tools
+    const severityCounts = { critical: 0, high: 0, medium: 0, low: 0 };
+    const toolCounts = {};
+
+    vulnerabilities.forEach((vuln) => {
+      const severity = (vuln.severity || 'low').toLowerCase();
+      if (severityCounts.hasOwnProperty(severity)) {
+        severityCounts[severity]++;
+      } else {
+        severityCounts.low++;
       }
+
+      const tool = vuln.tool || 'unknown';
+      toolCounts[tool] = (toolCounts[tool] || 0) + 1;
     });
 
-    const counts = {
-      critical: categorized.critical.length,
-      high: categorized.high.length,
-      medium: categorized.medium.length,
-      low: categorized.low.length,
-      total: results.length
-    };
+    setProcessedData({
+      vulnerabilities,
+      severityCounts,
+      toolCounts,
+      totalCount: vulnerabilities.length
+    });
+  }, [results, issuesFound]);
 
-    return { ...categorized, counts };
-  }, [results]);
+  const { vulnerabilities, severityCounts, toolCounts, totalCount } = processedData;
 
-  const { critical, high, medium, low, counts } = processedResults;
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
 
-  // Colors for charts and UI
+  const getSeverityColor = (severity) => {
+    switch (severity?.toLowerCase()) {
+      case 'critical': return 'error';
+      case 'high': return 'error';
+      case 'medium': return 'warning';
+      case 'low': return 'success';
+      default: return 'default';
+    }
+  };
+
+  const getSeverityIcon = (severity) => {
+    switch (severity?.toLowerCase()) {
+      case 'critical':
+      case 'high':
+        return <ErrorIcon />;
+      case 'medium':
+        return <WarningIcon />;
+      case 'low':
+        return <InfoIcon />;
+      default:
+        return <InfoIcon />;
+    }
+  };
+
   const COLORS = {
-    critical: '#f44336',
-    high: '#ff9800', 
-    medium: '#2196f3',
+    critical: '#d32f2f',
+    high: '#f44336',
+    medium: '#ff9800',
     low: '#4caf50',
   };
 
-  // Pie chart data
+  // Chart data
   const pieChartData = [
-    { name: 'Critical', value: counts.critical, color: COLORS.critical },
-    { name: 'High', value: counts.high, color: COLORS.high },
-    { name: 'Medium', value: counts.medium, color: COLORS.medium },
-    { name: 'Low', value: counts.low, color: COLORS.low },
+    { name: 'Critical', value: severityCounts.critical, color: COLORS.critical },
+    { name: 'High', value: severityCounts.high, color: COLORS.high },
+    { name: 'Medium', value: severityCounts.medium, color: COLORS.medium },
+    { name: 'Low', value: severityCounts.low, color: COLORS.low },
   ].filter(item => item.value > 0);
 
-  // If no results, show appropriate message
-  if (!results || results.length === 0) {
+  const toolChartData = Object.entries(toolCounts).map(([name, value]) => ({ name, value }));
+
+  // Special case: Have issuesFound but no vulnerabilities
+  if (issuesFound > 0 && vulnerabilities.length === 0) {
+    return (
+      <Paper sx={{ p: 3 }}>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Scan Found {issuesFound} Issues
+          </Typography>
+          <Typography variant="body2">
+            The scan detected {issuesFound} security issues, but detailed vulnerability data could not be loaded.
+          </Typography>
+        </Alert>
+      </Paper>
+    );
+  }
+
+  // No issues found
+  if (vulnerabilities.length === 0 && issuesFound === 0) {
     return (
       <Paper sx={{ p: 3, textAlign: 'center' }}>
-        <CheckCircle color="success" sx={{ fontSize: 48, mb: 2 }} />
+        <CheckCircleIcon color="success" sx={{ fontSize: 48, mb: 2 }} />
         <Typography variant="h6" gutterBottom>
-          No Issues Found
+          No Security Issues Found!
         </Typography>
         <Typography color="textSecondary">
-          {issuesFound === 0 
-            ? "Great! No security issues were detected in your code."
-            : "Scan completed but no detailed results are available."}
+          Great! No security vulnerabilities were detected in your code.
         </Typography>
       </Paper>
     );
@@ -578,290 +172,579 @@ const ScanResults = ({ results, issuesFound, currentFile }) => {
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-        <SecurityIcon sx={{ mr: 1 }} />
-        Scan Results
-      </Typography>
-
-      {/* Summary Statistics */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2, bgcolor: 'background.paper' }}>
-            {/* FIXED: Use component="div" to avoid <p> containing <div> */}
-            <Typography component="div" variant="body2" fontWeight="bold">
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box component="span">Total Issues</Box>
-                <Chip 
-                  size="small" 
-                  icon={<BugIcon />} 
-                  label={counts.total} 
-                  color="default" 
-                />
-              </Box>
+      {/* Header */}
+      <Paper sx={{ p: 3, mb: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          Scan Completed - Found {totalCount} Issues
+        </Typography>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Typography variant="body1">
+              <strong>Scan Date:</strong> {new Date().toLocaleString()}
             </Typography>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
-            <Typography component="div" variant="body2" fontWeight="bold">
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box component="span">Critical & High</Box>
-                <Chip 
-                  size="small" 
-                  icon={<ErrorIcon />} 
-                  label={counts.critical + counts.high} 
-                  sx={{ bgcolor: 'error.dark', color: 'white' }}
-                />
-              </Box>
+            <Typography variant="body1">
+              <strong>Issues Found:</strong> {totalCount}
             </Typography>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2, bgcolor: 'warning.light', color: 'warning.contrastText' }}>
-            <Typography component="div" variant="body2" fontWeight="bold">
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box component="span">Medium & Low</Box>
-                <Chip 
-                  size="small" 
-                  icon={<InfoIcon />} 
-                  label={counts.medium + counts.low} 
-                  sx={{ bgcolor: 'warning.dark', color: 'white' }}
-                />
-              </Box>
+            <Typography variant="body1">
+              <strong>Tools Used:</strong> {Object.keys(toolCounts).join(', ') || 'Unknown'}
             </Typography>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {/* Charts and Details */}
-      <Grid container spacing={3}>
-        {/* Pie Chart */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Issues by Severity
-            </Typography>
-            {pieChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {pieChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [value, 'Issues']} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography color="text.secondary">No issues to display</Typography>
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-
-        {/* Severity Breakdown */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Severity Breakdown
-            </Typography>
-            <List>
-              <ListItem>
-                <ListItemIcon>
-                  <ErrorIcon sx={{ color: COLORS.critical }} />
-                </ListItemIcon>
-                <ListItemText 
-                  primary={
-                    <Typography component="div">
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box component="span">Critical Issues</Box>
-                        <Chip 
-                          size="small" 
-                          label={counts.critical} 
-                          sx={{ bgcolor: COLORS.critical, color: 'white' }}
-                        />
-                      </Box>
-                    </Typography>
-                  }
-                />
-              </ListItem>
-              
-              <ListItem>
-                <ListItemIcon>
-                  <WarningIcon sx={{ color: COLORS.high }} />
-                </ListItemIcon>
-                <ListItemText 
-                  primary={
-                    <Typography component="div">
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box component="span">High Issues</Box>
-                        <Chip 
-                          size="small" 
-                          label={counts.high} 
-                          sx={{ bgcolor: COLORS.high, color: 'white' }}
-                        />
-                      </Box>
-                    </Typography>
-                  }
-                />
-              </ListItem>
-              
-              <ListItem>
-                <ListItemIcon>
-                  <InfoIcon sx={{ color: COLORS.medium }} />
-                </ListItemIcon>
-                <ListItemText 
-                  primary={
-                    <Typography component="div">
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box component="span">Medium Issues</Box>
-                        <Chip 
-                          size="small" 
-                          label={counts.medium} 
-                          sx={{ bgcolor: COLORS.medium, color: 'white' }}
-                        />
-                      </Box>
-                    </Typography>
-                  }
-                />
-              </ListItem>
-              
-              <ListItem>
-                <ListItemIcon>
-                  <InfoIcon sx={{ color: COLORS.low }} />
-                </ListItemIcon>
-                <ListItemText 
-                  primary={
-                    <Typography component="div">
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box component="span">Low Issues</Box>
-                        <Chip 
-                          size="small" 
-                          label={counts.low} 
-                          sx={{ bgcolor: COLORS.low, color: 'white' }}
-                        />
-                      </Box>
-                    </Typography>
-                  }
-                />
-              </ListItem>
-            </List>
-          </Paper>
-        </Grid>
-
-        {/* Issues List */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">
-                Detailed Issues ({counts.total})
-              </Typography>
-              <IconButton size="small">
-                <DownloadIcon />
-              </IconButton>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+              <Button variant="outlined">Save Report</Button>
+              <Button variant="outlined">Export</Button>
             </Box>
-            
-            {counts.critical > 0 && (
-              <>
-                <Typography variant="subtitle1" sx={{ color: COLORS.critical, fontWeight: 'bold', mt: 2 }}>
-                  Critical Issues ({counts.critical})
-                </Typography>
-                <List>
-                  {critical.map((issue, index) => (
-                    <ListItem key={`critical-${index}`} divider>
-                      <ListItemIcon>
-                        <ErrorIcon sx={{ color: COLORS.critical }} />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={issue.name || issue.title || 'Critical Issue'}
-                        secondary={
-                          <Typography component="div" variant="body2" color="text.secondary">
-                            <Box component="span" display="block">
-                              {issue.description || issue.message || 'No description available'}
-                            </Box>
-                            <Box component="span" display="inline-flex" alignItems="center" gap={1} mt={0.5}>
-                              {issue.file && (
-                                <Chip size="small" label={issue.file.fileName || issue.file} variant="outlined" />
-                              )}
-                              {issue.tool && (
-                                <Chip size="small" label={issue.tool} color="primary" variant="outlined" />
-                              )}
-                              {issue.location?.line && (
-                                <Chip size="small" label={`Line ${issue.location.line}`} variant="outlined" />
-                              )}
-                            </Box>
-                          </Typography>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </>
-            )}
-
-            {counts.high > 0 && (
-              <>
-                <Typography variant="subtitle1" sx={{ color: COLORS.high, fontWeight: 'bold', mt: 2 }}>
-                  High Issues ({counts.high})
-                </Typography>
-                <List>
-                  {high.map((issue, index) => (
-                    <ListItem key={`high-${index}`} divider>
-                      <ListItemIcon>
-                        <WarningIcon sx={{ color: COLORS.high }} />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={issue.name || issue.title || 'High Issue'}
-                        secondary={
-                          <Typography component="div" variant="body2" color="text.secondary">
-                            <Box component="span" display="block">
-                              {issue.description || issue.message || 'No description available'}
-                            </Box>
-                            <Box component="span" display="inline-flex" alignItems="center" gap={1} mt={0.5}>
-                              {issue.file && (
-                                <Chip size="small" label={issue.file.fileName || issue.file} variant="outlined" />
-                              )}
-                              {issue.tool && (
-                                <Chip size="small" label={issue.tool} color="primary" variant="outlined" />
-                              )}
-                              {issue.location?.line && (
-                                <Chip size="small" label={`Line ${issue.location.line}`} variant="outlined" />
-                              )}
-                            </Box>
-                          </Typography>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </>
-            )}
-
-            {(counts.medium > 0 || counts.low > 0) && (
-              <>
-                <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 'bold', mt: 2 }}>
-                  Other Issues ({counts.medium + counts.low})
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  {counts.medium} Medium + {counts.low} Low severity issues
-                </Typography>
-              </>
-            )}
-          </Paper>
+          </Grid>
         </Grid>
-      </Grid>
+      </Paper>
+
+      {/* Tabs */}
+      <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 3 }}>
+        <Tab label="Overview" icon={<AssignmentIcon />} iconPosition="start" />
+        <Tab label={`Vulnerabilities (${totalCount})`} icon={<BugIcon />} iconPosition="start" />
+        <Tab label="Code View" icon={<CodeIcon />} iconPosition="start" />
+        <Tab label="Report" icon={<DescriptionIcon />} iconPosition="start" />
+      </Tabs>
+
+      {/* Overview Tab */}
+      {tabValue === 0 && (
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" gutterBottom>
+                  Summary by Severity
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={6} sm={3}>
+                    <Paper sx={{ p: 2, textAlign: 'center', bgcolor: COLORS.critical, color: 'white' }}>
+                      <Typography variant="h3">{severityCounts.critical}</Typography>
+                      <Typography variant="subtitle2">Critical</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Paper sx={{ p: 2, textAlign: 'center', bgcolor: COLORS.high, color: 'white' }}>
+                      <Typography variant="h3">{severityCounts.high}</Typography>
+                      <Typography variant="subtitle2">High</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Paper sx={{ p: 2, textAlign: 'center', bgcolor: COLORS.medium, color: 'white' }}>
+                      <Typography variant="h3">{severityCounts.medium}</Typography>
+                      <Typography variant="subtitle2">Medium</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Paper sx={{ p: 2, textAlign: 'center', bgcolor: COLORS.low, color: 'white' }}>
+                      <Typography variant="h3">{severityCounts.low}</Typography>
+                      <Typography variant="subtitle2">Low</Typography>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Typography variant="subtitle1" gutterBottom>
+                  Vulnerabilities by Severity
+                </Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                  {pieChartData.length > 0 ? (
+                    <PieChart>
+                      <Pie
+                        data={pieChartData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {pieChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [value, 'Issues']} />
+                      <Legend />
+                    </PieChart>
+                  ) : (
+                    <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Typography color="text.secondary">No vulnerabilities found</Typography>
+                    </Box>
+                  )}
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Typography variant="subtitle1" gutterBottom>
+                  Issues by Tool
+                </Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                  {toolChartData.length > 0 ? (
+                    <BarChart data={toolChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="value" name="Issues Found" fill="#8884d8" />
+                    </BarChart>
+                  ) : (
+                    <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Typography color="text.secondary">No data available</Typography>
+                    </Box>
+                  )}
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+      
+      {/* Vulnerabilities Table Tab */}
+      {tabValue === 1 && (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Severity</TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>File</TableCell>
+                <TableCell>Location</TableCell>
+                <TableCell>Tool</TableCell>
+                <TableCell>Description</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {vulnerabilities.map((vuln, index) => {
+                const fileName = (() => {
+                  if (typeof vuln.file === 'string') return vuln.file;
+                  if (vuln.file && typeof vuln.file === 'object') {
+                    return vuln.file.fileName || vuln.file.name || 'Unknown';
+                  }
+                  return 'Unknown';
+                })();
+                
+                const lineNumber = (() => {
+                  if (vuln.location && typeof vuln.location === 'object') {
+                    return vuln.location.line || '?';
+                  }
+                  return vuln.line || '?';
+                })();
+                
+                const columnNumber = (() => {
+                  if (vuln.location && typeof vuln.location === 'object') {
+                    return vuln.location.column || '?';
+                  }
+                  return vuln.column || '?';
+                })();
+                
+                const description = (() => {
+                  if (typeof vuln.description === 'string') return vuln.description;
+                  if (typeof vuln.message === 'string') return vuln.message;
+                  if (vuln.description && typeof vuln.description === 'object') {
+                    return vuln.description.text || vuln.description.value || 'No description';
+                  }
+                  return 'No description';
+                })();
+                
+                return (
+                  <TableRow key={index} hover>
+                    <TableCell>
+                      <Chip
+                        icon={getSeverityIcon(vuln.severity)}
+                        label={(vuln.severity || 'unknown').toUpperCase()}
+                        color={getSeverityColor(vuln.severity)}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="bold">
+                        {vuln.name || vuln.title || 'Unknown'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{vuln.type || vuln.vulnerabilityType || 'Unknown'}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontFamily="monospace">
+                        {fileName}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontFamily="monospace">
+                        {lineNumber}:{columnNumber}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        size="small" 
+                        label={vuln.tool || 'Unknown'} 
+                        variant="outlined" 
+                        color="primary"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ maxWidth: 300 }}>
+                        {description.length > 100 ? `${description.substring(0, 100)}...` : description}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Code View Tab - CHỈ CÓ CODE SNIPPET */}
+      {tabValue === 2 && (
+        <Box>
+          <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+            Code View - {totalCount} Issues Found
+          </Typography>
+          {vulnerabilities.length > 0 ? vulnerabilities.map((vuln, index) => {
+            const fileName = (() => {
+              if (typeof vuln.file === 'string') return vuln.file;
+              if (vuln.file && typeof vuln.file === 'object') {
+                return vuln.file.fileName || vuln.file.name || 'Unknown';
+              }
+              return 'Unknown';
+            })();
+            
+            const lineNumber = (() => {
+              if (vuln.location && typeof vuln.location === 'object') {
+                return vuln.location.line || 1;
+              }
+              return vuln.line || 1;
+            })();
+
+            const columnNumber = (() => {
+              if (vuln.location && typeof vuln.location === 'object') {
+                return vuln.location.column || 1;
+              }
+              return vuln.column || 1;
+            })();
+
+            // Generate code snippet
+            const generateCodeSnippet = () => {
+              if (vuln.name && vuln.name.toLowerCase().includes('double free')) {
+                return {
+                  beforeLines: [
+                    '    char* ptr = malloc(100);',
+                    '    if (ptr == NULL) return -1;',
+                    '    // ... some processing ...'
+                  ],
+                  vulnerableLine: '    free(ptr);  // ⚠️ Potential double free vulnerability',
+                  afterLines: [
+                    '    // ... more code ...',
+                    '    free(ptr);  // ❌ Second free() call',
+                    '    return 0;'
+                  ],
+                  startLine: Math.max(1, lineNumber - 3)
+                };
+              }
+              
+              if (vuln.name && vuln.name.toLowerCase().includes('buffer overflow')) {
+                return {
+                  beforeLines: [
+                    '    char buffer[10];',
+                    '    char* source = "This is a very long string";'
+                  ],
+                  vulnerableLine: '    strcpy(buffer, source);  // ⚠️ Buffer overflow detected',
+                  afterLines: [
+                    '    printf("Buffer: %s\\n", buffer);',
+                    '    return 0;'
+                  ],
+                  startLine: Math.max(1, lineNumber - 2)
+                };
+              }
+
+              return {
+                beforeLines: [
+                  '    // Function implementation',
+                  '    int result = 0;'
+                ],
+                vulnerableLine: '    return result;  // ⚠️ Security issue detected here',
+                afterLines: [
+                  '}',
+                  ''
+                ],
+                startLine: Math.max(1, lineNumber - 2)
+              };
+            };
+
+            const codeSnippet = generateCodeSnippet();
+            
+            return (
+              <Accordion key={index} sx={{ mb: 2 }}>
+                <AccordionSummary 
+                  expandIcon={<ExpandMoreIcon />}
+                  sx={{
+                    bgcolor: 'grey.50',
+                    '&:hover': { bgcolor: 'grey.100' },
+                    '& .MuiAccordionSummary-content': {
+                      alignItems: 'center',
+                      gap: 2
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CodeIcon color="primary" />
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      Detail - {fileName}
+                    </Typography>
+                  </Box>
+                  
+                  <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+                    Line {lineNumber}, Column {columnNumber}
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Chip
+                      size="small"
+                      label={vuln.tool || 'Unknown'}
+                      variant="outlined"
+                      color="primary"
+                    />
+                    <Chip
+                      size="small"
+                      label={(vuln.severity || 'unknown').toUpperCase()}
+                      color={getSeverityColor(vuln.severity)}
+                    />
+                  </Box>
+                </AccordionSummary>
+
+                <AccordionDetails sx={{ p: 0 }}>
+                  {/* Code Snippet */}
+                  <Box sx={{ bgcolor: '#1e1e1e', color: '#d4d4d4', fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}>
+                    {/* File name tab */}
+                    <Box sx={{ 
+                      px: 2, 
+                      py: 1, 
+                      bgcolor: '#2d2d30', 
+                      borderBottom: '1px solid #3e3e42',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}>
+                      <Box sx={{ width: 12, height: 12, bgcolor: '#f44336', borderRadius: '50%' }} />
+                      <Box sx={{ width: 12, height: 12, bgcolor: '#ff9800', borderRadius: '50%' }} />
+                      <Box sx={{ width: 12, height: 12, bgcolor: '#4caf50', borderRadius: '50%' }} />
+                      <Typography sx={{ ml: 2, fontSize: '0.875rem', color: '#cccccc' }}>
+                        📄 {fileName}
+                      </Typography>
+                    </Box>
+
+                    {/* Code lines */}
+                    <Box sx={{ p: 0 }}>
+                      {/* Before lines */}
+                      {codeSnippet.beforeLines.map((line, idx) => (
+                        <Box key={`before-${idx}`} sx={{ 
+                          display: 'flex', 
+                          minHeight: '24px',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }
+                        }}>
+                          <Box sx={{ 
+                            width: 60, 
+                            textAlign: 'right', 
+                            pr: 2, 
+                            py: 0.5,
+                            bgcolor: '#1e1e1e', 
+                            color: '#858585',
+                            fontSize: '0.75rem',
+                            borderRight: '1px solid #3e3e42'
+                          }}>
+                            {codeSnippet.startLine + idx}
+                          </Box>
+                          <Box sx={{ flex: 1, px: 2, py: 0.5, fontSize: '0.875rem' }}>
+                            {line}
+                          </Box>
+                        </Box>
+                      ))}
+                      
+                      {/* Vulnerable line - highlighted */}
+                      <Box sx={{ 
+                        display: 'flex', 
+                        minHeight: '24px',
+                        bgcolor: 'rgba(244, 67, 54, 0.1)',
+                        borderLeft: '4px solid #f44336'
+                      }}>
+                        <Box sx={{ 
+                          width: 56, 
+                          textAlign: 'right', 
+                          pr: 2, 
+                          py: 0.5,
+                          bgcolor: 'rgba(244, 67, 54, 0.2)', 
+                          color: '#ff6b6b',
+                          fontSize: '0.75rem',
+                          fontWeight: 'bold',
+                          borderRight: '1px solid #f44336'
+                        }}>
+                          {codeSnippet.startLine + codeSnippet.beforeLines.length}
+                        </Box>
+                        <Box sx={{ 
+                          flex: 1, 
+                          px: 2, 
+                          py: 0.5, 
+                          fontSize: '0.875rem',
+                          color: '#ffcccb',
+                          fontWeight: 500
+                        }}>
+                          {codeSnippet.vulnerableLine}
+                        </Box>
+                      </Box>
+                      
+                      {/* After lines */}
+                      {codeSnippet.afterLines.map((line, idx) => (
+                        <Box key={`after-${idx}`} sx={{ 
+                          display: 'flex', 
+                          minHeight: '24px',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }
+                        }}>
+                          <Box sx={{ 
+                            width: 60, 
+                            textAlign: 'right', 
+                            pr: 2, 
+                            py: 0.5,
+                            bgcolor: '#1e1e1e', 
+                            color: '#858585',
+                            fontSize: '0.75rem',
+                            borderRight: '1px solid #3e3e42'
+                          }}>
+                            {codeSnippet.startLine + codeSnippet.beforeLines.length + 1 + idx}
+                          </Box>
+                          <Box sx={{ flex: 1, px: 2, py: 0.5, fontSize: '0.875rem' }}>
+                            {line}
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+
+                  {/* ✅ VULNERABILITY DETAILS - Thêm lại phần này */}
+                  <Box sx={{ p: 3 }}>
+                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <BugIcon color="error" />
+                      Vulnerability Details
+                    </Typography>
+                    
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Name:</strong> {vuln.name || vuln.title || 'Unknown'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Type:</strong> {vuln.type || 'Unknown'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Severity:</strong> 
+                          <Chip 
+                            size="small" 
+                            label={(vuln.severity || 'unknown').toUpperCase()}
+                            color={getSeverityColor(vuln.severity)}
+                            sx={{ ml: 1 }}
+                          />
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Tool:</strong> {vuln.tool || 'Unknown'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Location:</strong> Line {lineNumber}, Column {columnNumber}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+
+                    {/* Description */}
+                    <Typography variant="body2" sx={{ mt: 2, mb: 1 }}>
+                      <strong>Description:</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                      {(() => {
+                        if (typeof vuln.description === 'string') return vuln.description;
+                        if (typeof vuln.message === 'string') return vuln.message;
+                        if (vuln.description && typeof vuln.description === 'object') {
+                          return vuln.description.text || vuln.description.value || 'No description available';
+                        }
+                        return 'No description available';
+                      })()}
+                    </Typography>
+
+                    {/* Remediation */}
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Remediation:</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ p: 2, bgcolor: 'success.light', color: 'success.dark', borderRadius: 1 }}>
+                      {(() => {
+                        if (typeof vuln.remediation === 'string') return vuln.remediation;
+                        if (vuln.remediation && typeof vuln.remediation === 'object') {
+                          return vuln.remediation.description || vuln.remediation.text || 'See vulnerability documentation';
+                        }
+                        return 'See vulnerability documentation';
+                      })()}
+                    </Typography>
+
+                    {/* References if available */}
+                    {vuln.references && Array.isArray(vuln.references) && vuln.references.length > 0 && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>References:</strong>
+                        </Typography>
+                        {vuln.references.slice(0, 3).map((ref, refIdx) => (
+                          <Typography key={refIdx} variant="body2" sx={{ mb: 0.5 }}>
+                            <Button 
+                              size="small" 
+                              href={typeof ref === 'string' ? ref : ref.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{ fontSize: '0.75rem', p: 0, minWidth: 'auto' }}
+                            >
+                              🔗 {typeof ref === 'string' ? ref : (ref.title || ref.url)}
+                            </Button>
+                          </Typography>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            );
+          }) : (
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
+              <CodeIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No Code Issues Found
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                No vulnerabilities found to display code for.
+              </Typography>
+            </Paper>
+          )}
+        </Box>
+      )}
+
+      {/* Report Tab */}
+      {tabValue === 3 && (
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Security Report
+          </Typography>
+          <Typography variant="body1" paragraph>
+            Executive summary: Found {totalCount} security issues across {Object.keys(toolCounts).length} scanning tools.
+          </Typography>
+          <Typography variant="body2" paragraph>
+            Critical: {severityCounts.critical}, High: {severityCounts.high}, Medium: {severityCounts.medium}, Low: {severityCounts.low}
+          </Typography>
+        </Paper>
+      )}
     </Box>
   );
 };

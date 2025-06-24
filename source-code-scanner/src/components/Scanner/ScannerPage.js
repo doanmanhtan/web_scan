@@ -45,7 +45,9 @@ function ScannerPage() {
     startScan,
     pauseScan,
     stopScan,
-    issuesFound
+    issuesFound,
+    results, // ✅ Add results from context
+    scanError // ✅ Add scanError for debugging
   } = useScan();
 
   const handleNext = () => {
@@ -76,13 +78,12 @@ function ScannerPage() {
     }
   };
 
-  const handleStartScan = () => {
-    startScan();
-    // Có thể sử dụng timeout hoặc promise để đợi quét hoàn tất
-    const timer = setTimeout(() => {
-      handleNext();
-      clearTimeout(timer);
-    }, 8000); // Giả lập quét hoàn tất sau 8 giây
+  const handleStartScan = async () => {
+    // ✅ Start scan and automatically move to results when complete
+    await startScan();
+    
+    // ✅ Move to next step immediately to show progress
+    handleNext();
   };
 
   const getStepContent = (step) => {
@@ -124,6 +125,14 @@ function ScannerPage() {
       case 2:
         return (
           <Box>
+            {/* ✅ Show scan error if any */}
+            {scanError && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {scanError}
+              </Alert>
+            )}
+            
+            {/* ✅ Show progress while scanning */}
             <ProgressIndicator 
               isScanning={isScanning} 
               progress={progress} 
@@ -133,8 +142,16 @@ function ScannerPage() {
               onStop={stopScan}
             />
             
+            {/* ✅ Show results when scan is complete */}
             {!isScanning && progress === 100 && (
-              <ScanResults />
+              <Box sx={{ mt: 3 }}>               
+                {/* ✅ Pass all necessary props to ScanResults */}
+                <ScanResults 
+                  results={results} 
+                  issuesFound={issuesFound}
+                  currentFile={currentFile}
+                />
+              </Box>
             )}
           </Box>
         );
@@ -177,7 +194,7 @@ function ScannerPage() {
         <Box sx={{ flex: '1 1 auto' }} />
         
         {activeStep === steps.length - 1 ? (
-          isScanning ? null : (
+          !isScanning && (
             <Button 
               variant="contained" 
               color="primary"
@@ -194,7 +211,7 @@ function ScannerPage() {
                 color="primary"
                 onClick={handleStartScan}
                 startIcon={<StartIcon />}
-                disabled={files.length === 0}
+                disabled={files.length === 0 || selectedTools.length === 0}
               >
                 Start Scan
               </Button>
