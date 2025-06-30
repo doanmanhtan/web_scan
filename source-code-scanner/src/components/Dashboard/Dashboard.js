@@ -18,6 +18,7 @@ import {
   IconButton,
   CircularProgress,
   Alert,
+  Avatar,
 } from '@mui/material';
 import {
   Security as SecurityIcon,
@@ -30,6 +31,7 @@ import {
   Error as ErrorIcon,
   Info as InfoIcon,
   Folder as FolderIcon,
+  TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
@@ -180,13 +182,35 @@ const Dashboard = () => {
     low: '#4caf50',      // xanh lá
   };
 
-  // Pie chart data
+  // Pie chart data - chỉ hiển thị những phần có giá trị > 0
   const pieChartData = summary ? [
     { name: 'Critical', value: summary.issueStats.critical, color: COLORS.critical },
     { name: 'High', value: summary.issueStats.high, color: COLORS.high },
     { name: 'Medium', value: summary.issueStats.medium, color: COLORS.medium },
     { name: 'Low', value: summary.issueStats.low, color: COLORS.low },
-  ] : [];
+  ].filter(item => item.value > 0) : [];
+
+  // Custom tooltip cho pie chart
+  const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0];
+      return (
+        <Box sx={{ 
+          bgcolor: 'background.paper', 
+          p: 1, 
+          border: 1, 
+          borderColor: 'divider',
+          borderRadius: 1,
+          boxShadow: 1
+        }}>
+          <Typography variant="body2" sx={{ color: data.payload.color, fontWeight: 'bold' }}>
+            {data.name}: {data.value} issues
+          </Typography>
+        </Box>
+      );
+    }
+    return null;
+  };
 
   const handleStartNewScan = useCallback(() => {
     navigate('/scanner');
@@ -213,133 +237,292 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) return <CircularProgress />;
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (loading) return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+      <CircularProgress size={60} />
+    </Box>
+  );
+  
+  if (error) return (
+    <Box sx={{ p: 3 }}>
+      <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+    </Box>
+  );
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          Dashboard
-        </Typography>
+    <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+      {/* Header */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 4,
+        p: 3,
+        bgcolor: 'background.paper',
+        borderRadius: 2,
+        boxShadow: 1
+      }}>
+        <Box>
+          <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+            Dashboard
+          </Typography>
+          {/* <Typography variant="subtitle1" color="text.secondary">
+            Monitor your application security in real-time
+          </Typography> */}
+        </Box>
         <Button
           variant="contained"
           color="primary"
+          size="large"
           startIcon={<AddIcon />}
           onClick={handleStartNewScan}
+          sx={{ 
+            px: 3, 
+            py: 1.5,
+            borderRadius: 2,
+            boxShadow: 2,
+            '&:hover': { boxShadow: 4 }
+          }}
         >
-          New Scan
+          Start New Scan
         </Button>
       </Box>
 
-
       <Grid container spacing={3}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={2.4}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h6" color="error.main" gutterBottom>
-                Critical Issues
-              </Typography>
-              <Typography variant="h4" color="error.main" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {summary.issueStats.critical}
-                <ErrorIcon color="error" sx={{ ml: 1 }} />
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={2.4}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h6" sx={{ color: '#ff9800' }} gutterBottom>
-                High Issues
-              </Typography>
-              <Typography variant="h4" sx={{ color: '#ff9800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {summary.issueStats.high}
-                <WarningIcon sx={{ color: '#ff9800', ml: 1 }} />
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={2.4}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h6" sx={{ color: '#2196f3' }} gutterBottom>
-                Medium Issues
-              </Typography>
-              <Typography variant="h4" sx={{ color: '#2196f3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {summary.issueStats.medium}
-                <InfoIcon sx={{ color: '#2196f3', ml: 1 }} />
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={2.4}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h6" sx={{ color: '#4caf50' }} gutterBottom>
-                Low Issues
-              </Typography>
-              <Typography variant="h4" sx={{ color: '#4caf50', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {summary.issueStats.low}
-                <InfoIcon sx={{ color: '#4caf50', ml: 1 }} />
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={2.4}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h6" color="default" gutterBottom>
-                Total Issues
-              </Typography>
-              <Typography variant="h4" color="default" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {summary.issueStats.total}
-                <BugIcon color="default" sx={{ ml: 1 }} />
-              </Typography>
-            </Paper>
+        {/* Statistics Cards */}
+        <Grid item xs={12}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={2.4}>
+              <Paper sx={{ 
+                p: 3, 
+                textAlign: 'center',
+                borderRadius: 2,
+                boxShadow: 2,
+                background: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+                border: `2px solid ${COLORS.critical}20`
+              }}>
+                <Avatar sx={{ bgcolor: COLORS.critical, mx: 'auto', mb: 2, width: 48, height: 48 }}>
+                  <ErrorIcon />
+                </Avatar>
+                <Typography variant="h4" sx={{ color: COLORS.critical, fontWeight: 'bold', mb: 1 }}>
+                  {summary.issueStats.critical}
+                </Typography>
+                <Typography variant="h6" sx={{ color: COLORS.critical }}>
+                  Critical Issues
+                </Typography>
+              </Paper>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={2.4}>
+              <Paper sx={{ 
+                p: 3, 
+                textAlign: 'center',
+                borderRadius: 2,
+                boxShadow: 2,
+                background: 'linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%)',
+                border: `2px solid ${COLORS.high}20`
+              }}>
+                <Avatar sx={{ bgcolor: COLORS.high, mx: 'auto', mb: 2, width: 48, height: 48 }}>
+                  <WarningIcon />
+                </Avatar>
+                <Typography variant="h4" sx={{ color: COLORS.high, fontWeight: 'bold', mb: 1 }}>
+                  {summary.issueStats.high}
+                </Typography>
+                <Typography variant="h6" sx={{ color: COLORS.high }}>
+                  High Issues
+                </Typography>
+              </Paper>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={2.4}>
+              <Paper sx={{ 
+                p: 3, 
+                textAlign: 'center',
+                borderRadius: 2,
+                boxShadow: 2,
+                background: 'linear-gradient(135deg, #e3f2fd 0%, #90caf9 100%)',
+                border: `2px solid ${COLORS.medium}20`
+              }}>
+                <Avatar sx={{ bgcolor: COLORS.medium, mx: 'auto', mb: 2, width: 48, height: 48 }}>
+                  <InfoIcon />
+                </Avatar>
+                <Typography variant="h4" sx={{ color: COLORS.medium, fontWeight: 'bold', mb: 1 }}>
+                  {summary.issueStats.medium}
+                </Typography>
+                <Typography variant="h6" sx={{ color: COLORS.medium }}>
+                  Medium Issues
+                </Typography>
+              </Paper>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={2.4}>
+              <Paper sx={{ 
+                p: 3, 
+                textAlign: 'center',
+                borderRadius: 2,
+                boxShadow: 2,
+                background: 'linear-gradient(135deg, #e8f5e8 0%, #a5d6a7 100%)',
+                border: `2px solid ${COLORS.low}20`
+              }}>
+                <Avatar sx={{ bgcolor: COLORS.low, mx: 'auto', mb: 2, width: 48, height: 48 }}>
+                  <InfoIcon />
+                </Avatar>
+                <Typography variant="h4" sx={{ color: COLORS.low, fontWeight: 'bold', mb: 1 }}>
+                  {summary.issueStats.low}
+                </Typography>
+                <Typography variant="h6" sx={{ color: COLORS.low }}>
+                  Low Issues
+                </Typography>
+              </Paper>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={2.4}>
+              <Paper sx={{ 
+                p: 3, 
+                textAlign: 'center',
+                borderRadius: 2,
+                boxShadow: 2,
+                background: 'linear-gradient(135deg, #f3e5f5 0%, #ce93d8 100%)',
+                border: '2px solid #9c27b020'
+              }}>
+                <Avatar sx={{ bgcolor: '#9c27b0', mx: 'auto', mb: 2, width: 48, height: 48 }}>
+                  <BugIcon />
+                </Avatar>
+                <Typography variant="h4" sx={{ color: '#9c27b0', fontWeight: 'bold', mb: 1 }}>
+                  {summary.issueStats.total}
+                </Typography>
+                <Typography variant="h6" sx={{ color: '#9c27b0' }}>
+                  Total Issues
+                </Typography>
+              </Paper>
+            </Grid>
           </Grid>
         </Grid>
 
-        {/* Charts */}
+        {/* Charts Section */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Issues by Severity
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieChartData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {pieChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [value, 'Issues']} />
-                <Legend />
-              </PieChart>
+          <Paper sx={{ p: 3, borderRadius: 2, boxShadow: 2, height: '400px' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                <TrendingUpIcon />
+              </Avatar>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                Issues Distribution
+              </Typography>
+            </Box>
+            <ResponsiveContainer width="100%" height={320}>
+              {pieChartData.length > 0 ? (
+                <PieChart>
+                  <Pie
+                    data={pieChartData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                    labelLine={false}
+                    stroke="#fff"
+                    strokeWidth={3}
+                  >
+                    {pieChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    iconType="circle"
+                  />
+                </PieChart>
+              ) : (
+                <Box sx={{ 
+                  height: 320, 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  color: 'text.secondary'
+                }}>
+                  <BugIcon sx={{ fontSize: 60, mb: 2, opacity: 0.5 }} />
+                  <Typography variant="h6">No security issues found</Typography>
+                  <Typography variant="body2">Your applications are secure!</Typography>
+                </Box>
+              )}
             </ResponsiveContainer>
           </Paper>
         </Grid>
+
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Issues Over Time
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
+          <Paper sx={{ p: 3, borderRadius: 2, boxShadow: 2, height: '400px' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Avatar sx={{ bgcolor: 'secondary.main', mr: 2 }}>
+                <HistoryIcon />
+              </Avatar>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                Issues Trends
+              </Typography>
+            </Box>
+            <ResponsiveContainer width="100%" height={320}>
               {issuesOverTime.length > 0 ? (
                 <LineChart data={issuesOverTime}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis dataKey="date" stroke="#666" />
+                  <YAxis stroke="#666" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #ccc',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }} 
+                  />
                   <Legend />
-                  <Line type="monotone" dataKey="critical" stroke={COLORS.critical} name="Critical" />
-                  <Line type="monotone" dataKey="high" stroke={COLORS.high} name="High" />
-                  <Line type="monotone" dataKey="medium" stroke={COLORS.medium} name="Medium" />
-                  <Line type="monotone" dataKey="low" stroke={COLORS.low} name="Low" />
+                  <Line 
+                    type="monotone" 
+                    dataKey="critical" 
+                    stroke={COLORS.critical} 
+                    name="Critical" 
+                    strokeWidth={3}
+                    dot={{ fill: COLORS.critical, strokeWidth: 2, r: 4 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="high" 
+                    stroke={COLORS.high} 
+                    name="High" 
+                    strokeWidth={3}
+                    dot={{ fill: COLORS.high, strokeWidth: 2, r: 4 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="medium" 
+                    stroke={COLORS.medium} 
+                    name="Medium" 
+                    strokeWidth={3}
+                    dot={{ fill: COLORS.medium, strokeWidth: 2, r: 4 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="low" 
+                    stroke={COLORS.low} 
+                    name="Low" 
+                    strokeWidth={3}
+                    dot={{ fill: COLORS.low, strokeWidth: 2, r: 4 }}
+                  />
                 </LineChart>
               ) : (
-                <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Typography color="text.secondary">No data available</Typography>
+                <Box sx={{ 
+                  height: 320, 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  color: 'text.secondary'
+                }}>
+                  <HistoryIcon sx={{ fontSize: 60, mb: 2, opacity: 0.5 }} />
+                  <Typography variant="h6">No trend data available</Typography>
+                  <Typography variant="body2">Run more scans to see trends</Typography>
                 </Box>
               )}
             </ResponsiveContainer>
@@ -348,47 +531,99 @@ const Dashboard = () => {
 
         {/* Recent Scans */}
         <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" component="div">
+          <Card sx={{ borderRadius: 2, boxShadow: 2, height: '500px' }}>
+            <CardContent sx={{ pb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ bgcolor: 'info.main', mr: 2 }}>
+                  <SecurityIcon />
+                </Avatar>
+                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
                   Recent Scans
                 </Typography>
-                <IconButton size="small">
-                  <HistoryIcon />
-                </IconButton>
               </Box>
-              <List>
-                {recentScans.map((scan) => (
+              <List sx={{ maxHeight: '350px', overflow: 'auto' }}>
+                {recentScans.map((scan, index) => (
                   <React.Fragment key={scan.id}>
                     <ListItem
+                      sx={{ 
+                        borderRadius: 1, 
+                        mb: 1,
+                        '&:hover': { bgcolor: 'action.hover' }
+                      }}
                       secondaryAction={
-                        <IconButton edge="end" aria-label="view" onClick={() => navigate(`/reports/${scan.id}`)}>
+                        <IconButton 
+                          edge="end" 
+                          onClick={() => navigate(`/reports/${scan.id}`)}
+                          sx={{ 
+                            bgcolor: 'primary.main', 
+                            color: 'white',
+                            '&:hover': { bgcolor: 'primary.dark' }
+                          }}
+                        >
                           <ArrowForwardIcon />
                         </IconButton>
                       }
                     >
                       <ListItemIcon>
-                        <SecurityIcon />
+                        <Avatar sx={{ bgcolor: 'success.main' }}>
+                          <SecurityIcon />
+                        </Avatar>
                       </ListItemIcon>
                       <ListItemText
-                        primary={scan.name}
-                        secondary={`${scan.date} - ${scan.status}`}
+                        primary={
+                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                            {scan.name}
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography variant="body2" color="text.secondary">
+                            {scan.date} • {scan.status}
+                          </Typography>
+                        }
                       />
-                      <Box sx={{ display: 'flex', gap: 1, mr: 2 }}>
-                        {scan.criticalIssues > 0 && <Chip size="small" label={scan.criticalIssues} sx={{ bgcolor: COLORS.critical, color: 'white' }} icon={<ErrorIcon sx={{ color: 'white' }} />} />}
-                        {scan.highIssues > 0 && <Chip size="small" label={scan.highIssues} sx={{ bgcolor: COLORS.high, color: 'white' }} icon={<WarningIcon sx={{ color: 'white' }} />} />}
-                        {scan.mediumIssues > 0 && <Chip size="small" label={scan.mediumIssues} sx={{ bgcolor: COLORS.medium, color: 'white' }} icon={<InfoIcon sx={{ color: 'white' }} />} />}
-                        {scan.lowIssues > 0 && <Chip size="small" label={scan.lowIssues} sx={{ bgcolor: COLORS.low, color: 'white' }} icon={<InfoIcon sx={{ color: 'white' }} />} />}
+                      <Box sx={{ display: 'flex', gap: 0.5, mr: 2, flexWrap: 'wrap' }}>
+                        {scan.criticalIssues > 0 && (
+                          <Chip 
+                            size="small" 
+                            label={scan.criticalIssues} 
+                            sx={{ bgcolor: COLORS.critical, color: 'white', fontWeight: 'bold' }} 
+                          />
+                        )}
+                        {scan.highIssues > 0 && (
+                          <Chip 
+                            size="small" 
+                            label={scan.highIssues} 
+                            sx={{ bgcolor: COLORS.high, color: 'white', fontWeight: 'bold' }} 
+                          />
+                        )}
+                        {scan.mediumIssues > 0 && (
+                          <Chip 
+                            size="small" 
+                            label={scan.mediumIssues} 
+                            sx={{ bgcolor: COLORS.medium, color: 'white', fontWeight: 'bold' }} 
+                          />
+                        )}
+                        {scan.lowIssues > 0 && (
+                          <Chip 
+                            size="small" 
+                            label={scan.lowIssues} 
+                            sx={{ bgcolor: COLORS.low, color: 'white', fontWeight: 'bold' }} 
+                          />
+                        )}
                       </Box>
                     </ListItem>
-                    {recentScans.indexOf(scan) < recentScans.length - 1 && <Divider variant="inset" component="li" />}
+                    {index < recentScans.length - 1 && <Divider />}
                   </React.Fragment>
                 ))}
               </List>
             </CardContent>
-            <CardActions>
-              <Button size="small" endIcon={<ArrowForwardIcon />} onClick={handleViewAllScans}>
+            <CardActions sx={{ justifyContent: 'center', pt: 0 }}>
+              <Button 
+                variant="outlined"
+                endIcon={<ArrowForwardIcon />} 
+                onClick={handleViewAllScans}
+                sx={{ borderRadius: 2 }}
+              >
                 View All Scans
               </Button>
             </CardActions>
@@ -397,108 +632,79 @@ const Dashboard = () => {
 
         {/* Recent Projects */}
         <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" component="div">
+          <Card sx={{ borderRadius: 2, boxShadow: 2, height: '500px' }}>
+            <CardContent sx={{ pb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
+                  <FolderIcon />
+                </Avatar>
+                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
                   Recent Projects
                 </Typography>
-                <IconButton size="small">
-                  <FolderIcon />
-                </IconButton>
               </Box>
-              <List>
-                {recentProjects.map((project) => (
+              <List sx={{ maxHeight: '350px', overflow: 'auto' }}>
+                {recentProjects.map((project, index) => (
                   <React.Fragment key={project.id}>
                     <ListItem
+                      sx={{ 
+                        borderRadius: 1, 
+                        mb: 1,
+                        '&:hover': { bgcolor: 'action.hover' }
+                      }}
                       secondaryAction={
-                        <IconButton edge="end" aria-label="view" onClick={() => navigate(`/reports/${project.id}`)}>
+                        <IconButton 
+                          edge="end" 
+                          onClick={() => navigate(`/reports/${project.id}`)}
+                          sx={{ 
+                            bgcolor: 'primary.main', 
+                            color: 'white',
+                            '&:hover': { bgcolor: 'primary.dark' }
+                          }}
+                        >
                           <ArrowForwardIcon />
                         </IconButton>
                       }
                     >
                       <ListItemIcon>
-                        <CodeIcon />
+                        <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                          <CodeIcon />
+                        </Avatar>
                       </ListItemIcon>
                       <ListItemText
-                        primary={project.name}
-                        secondary={`Last scan: ${project.lastScan}`}
+                        primary={
+                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                            {project.name}
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography variant="body2" color="text.secondary">
+                            Last scan: {project.lastScan}
+                          </Typography>
+                        }
                       />
                       <Chip 
-                        size="small" 
+                        size="medium" 
                         label={`${project.issuesCount} issues`} 
-                        color="primary" 
+                        color={project.issuesCount > 10 ? 'error' : project.issuesCount > 5 ? 'warning' : 'success'}
+                        sx={{ fontWeight: 'bold' }}
                       />
                     </ListItem>
-                    {recentProjects.indexOf(project) < recentProjects.length - 1 && <Divider variant="inset" component="li" />}
+                    {index < recentProjects.length - 1 && <Divider />}
                   </React.Fragment>
                 ))}
               </List>
             </CardContent>
-            <CardActions>
-              <Button size="small" endIcon={<ArrowForwardIcon />} onClick={handleViewAllProjects}>
+            <CardActions sx={{ justifyContent: 'center', pt: 0 }}>
+              <Button 
+                variant="outlined"
+                endIcon={<ArrowForwardIcon />} 
+                onClick={handleViewAllProjects}
+                sx={{ borderRadius: 2 }}
+              >
                 View All Projects
               </Button>
             </CardActions>
           </Card>
-        </Grid>
-
-        {/* Quick Start Guide */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Quick Start Guide
-            </Typography>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={4}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography color="primary" variant="h6">
-                      Step 1: Select Files
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      Upload C/C++ source files or select a directory containing your code.
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography color="primary" variant="h6">
-                      Step 2: Configure Scan
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      Choose scan type, select analysis tools, and customize rule settings.
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography color="primary" variant="h6">
-                      Step 3: Review Results
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      Analyze scan results, review code issues, and generate detailed reports.
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-            <Box sx={{ mt: 2, textAlign: 'center' }}>
-              <Button 
-                variant="contained" 
-                color="primary"
-                startIcon={<SecurityIcon />}
-                onClick={handleStartNewScan}
-                sx={{ mt: 2 }}
-              >
-                Start Your First Scan
-              </Button>
-            </Box>
-          </Paper>
         </Grid>
       </Grid>
     </Box>

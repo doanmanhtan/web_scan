@@ -962,7 +962,7 @@ const VulnerabilitiesPage = () => {
                   onClick={() => handleViewCode(vuln)}
                   startIcon={<CodeIcon />}
                 >
-                  Load Code Snippet
+                  Load Code View
                 </Button>
               </AccordionDetails>
             </Accordion>

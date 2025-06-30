@@ -16,6 +16,9 @@ router.put('/scanners', authorize(['admin']), settingsController.updateScannerPa
 // Get scanner rules
 router.get('/rules', settingsController.getScannerRules);
 
+// Get scanner rule by ID
+router.get('/rules/:id', settingsController.getScannerRuleById);
+
 // Create scanner rule
 router.post('/rules', authorize(['admin', 'security_team']), settingsController.createScannerRule);
 
@@ -36,6 +39,8 @@ router.get('/user', settingsController.getUserSettings);
 
 // Update user settings
 router.put('/user', settingsController.updateUserSettings);
+
+
 
 module.exports = router;
 

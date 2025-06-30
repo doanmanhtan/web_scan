@@ -440,82 +440,83 @@ class CppcheckScanner extends BaseScanner {
     return vulnerabilities;
   }
 
-  /**
-   * ENHANCED: Create vulnerability object
-   * @param {string} filePath - File path
-   * @param {string|number} lineNum - Line number
-   * @param {string} severity - Severity level
-   * @param {string} id - Issue ID
-   * @param {string} message - Issue message
-   * @param {string} baseDirectory - Base directory
-   * @param {Object} extra - Extra metadata (cwe, column)
-   * @returns {Object|null} Vulnerability object
-   */
-  createVulnerability(filePath, lineNum, severity, id, message, baseDirectory, extra = {}) {
-    try {
-      // Clean up file path
-      let cleanFilePath = filePath.trim();
-      
-      // Convert to relative path
-      const fileName = path.basename(cleanFilePath);
-      const relativePath = path.relative(baseDirectory, cleanFilePath);
+ /**
+ * ENHANCED: Create vulnerability object with proper data format
+ * @param {string} filePath - File path
+ * @param {string|number} lineNum - Line number
+ * @param {string} severity - Severity level
+ * @param {string} id - Issue ID
+ * @param {string} message - Issue message
+ * @param {string} baseDirectory - Base directory
+ * @param {Object} extra - Extra metadata (cwe, column)
+ * @returns {Object|null} Vulnerability object
+ */
+createVulnerability(filePath, lineNum, severity, id, message, baseDirectory, extra = {}) {
+  try {
+    // Clean up file path
+    let cleanFilePath = filePath.trim();
+    
+    // Convert to relative path
+    const fileName = path.basename(cleanFilePath);
+    const relativePath = path.relative(baseDirectory, cleanFilePath);
 
-      // ENHANCED: Map cppcheck severity to standard levels
-      const severityMap = {
-        'error': 'high',
-        'warning': 'medium',
-        'style': 'low',
-        'performance': 'low',
-        'portability': 'low',
-        'information': 'low',
-        'debug': 'low'
-      };
+    // ENHANCED: Map cppcheck severity to standard levels
+    const severityMap = {
+      'error': 'high',
+      'warning': 'medium',
+      'style': 'low',
+      'performance': 'low',
+      'portability': 'low',
+      'information': 'low',
+      'debug': 'low'
+    };
 
-      const mappedSeverity = severityMap[severity?.toLowerCase()] || 'medium';
+    const mappedSeverity = severityMap[severity?.toLowerCase()] || 'medium';
 
-      // ENHANCED: Determine issue type based on ID and CWE
-      const issueType = this.determineIssueType(id, message, extra.cwe);
+    // ENHANCED: Determine issue type based on ID and CWE
+    const issueType = this.determineIssueType(id, message, extra.cwe);
 
-      // ENHANCED: Create detailed vulnerability object
-      return {
-        name: `Cppcheck: ${this.formatIssueName(id)}`,
-        severity: mappedSeverity,
-        type: issueType,
-        tool: 'cppcheck',
-        file: {
-          fileName,
-          filePath: relativePath,
-          fileExt: path.extname(fileName)
-        },
-        location: {
-          line: parseInt(lineNum) || 1,
-          column: extra.column || 1
-        },
-        description: message || 'No description provided',
-        codeSnippet: {
-          line: '',
-          before: [],
-          after: []
-        },
-        remediation: {
-          description: this.getRemediation(id, message)
-        },
-        references: [
-          'https://cppcheck.sourceforge.io/',
-          'https://cppcheck.sourceforge.io/manual.pdf'
-        ],
-        metadata: {
-          cppcheckId: id,
-          originalSeverity: severity,
-          cwe: extra.cwe || null
-        }
-      };
-    } catch (error) {
-      console.warn(`Error creating vulnerability for ${filePath}:${lineNum}:`, error.message);
-      return null;
-    }
+    // FIXED: Create properly formatted vulnerability object
+    return {
+      name: `Cppcheck: ${this.formatIssueName(id)}`,
+      severity: mappedSeverity,
+      type: issueType,
+      tool: 'cppcheck',
+      file: {
+        fileName,
+        filePath: relativePath,
+        fileExt: path.extname(fileName)
+      },
+      location: {
+        line: parseInt(lineNum) || 1,
+        column: extra.column || 1
+      },
+      description: message || 'No description provided',
+      codeSnippet: {
+        line: 'Code snippet not available', // FIXED: Provide default value
+        before: [],
+        after: []
+      },
+      remediation: {
+        description: this.getRemediation(id, message)
+      },
+      // FIXED: Format references as array of strings (simpler approach)
+      references: [
+        'https://cppcheck.sourceforge.io/',
+        'https://cppcheck.sourceforge.io/manual.pdf'
+      ],
+      status: 'open',
+      metadata: {
+        cppcheckId: id,
+        originalSeverity: severity,
+        cwe: extra.cwe || null
+      }
+    };
+  } catch (error) {
+    console.warn(`Error creating vulnerability for ${filePath}:${lineNum}:`, error.message);
+    return null;
   }
-
+}
   /**
    * Determine issue type based on ID, message, and CWE
    * @param {string} id - Issue ID

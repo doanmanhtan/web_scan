@@ -28,6 +28,10 @@ import {
   Grid,
   List,
   ListItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -55,6 +59,9 @@ const ReportsPage = () => {
   const [selectedReportDetails, setSelectedReportDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -154,16 +161,100 @@ const ReportsPage = () => {
     handleCloseMenu();
   };
 
-  const handleDownloadReport = (reportIdToDownload) => {
-    console.log(`Download report: ${reportIdToDownload}`);
-    alert(`Downloading report: ${reportIdToDownload}`);
+  const handleDownloadReport = async (reportIdToDownload) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`/api/scans/${reportIdToDownload}/export`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download report');
+      }
+
+      // Get the blob from response
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from response headers or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `report_${reportIdToDownload}.pdf`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      console.log(`Successfully downloaded report: ${reportIdToDownload}`);
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      setError('Failed to download report. Please try again.');
+    } finally {
+      setLoading(false);
+      handleCloseMenu();
+    }
+  };
+
+  const handleDeleteClick = (reportIdToDelete) => {
+    setReportToDelete(reportIdToDelete);
+    setDeleteDialogOpen(true);
     handleCloseMenu();
   };
 
-  const handleDeleteReport = (reportIdToDelete) => {
-    console.log(`Delete report: ${reportIdToDelete}`);
-    alert(`Deleting report: ${reportIdToDelete}`);
-    handleCloseMenu();
+  const handleDeleteConfirm = async () => {
+    if (!reportToDelete) return;
+    
+    try {
+      setDeleteLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`/api/scans/${reportToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete report');
+      }
+
+      // Remove the report from the local state
+      setReports(reports.filter(report => report.id !== reportToDelete));
+      
+      console.log(`Successfully deleted report: ${reportToDelete}`);
+      setError(''); // Clear any existing errors
+      
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      setError('Failed to delete report. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteDialogOpen(false);
+      setReportToDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setReportToDelete(null);
   };
 
   const handleIssueClick = (severity) => {
@@ -390,11 +481,41 @@ const ReportsPage = () => {
           <ListItemIcon><DownloadIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Download</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleDeleteReport(selectedReportId)}>
+        <MenuItem onClick={() => handleDeleteClick(selectedReportId)}>
           <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Delete</ListItemText>
         </MenuItem>
       </Menu>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          Confirm Delete
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this report? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} disabled={deleteLoading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            color="error" 
+            variant="contained"
+            disabled={deleteLoading}
+          >
+            {deleteLoading ? <CircularProgress size={20} /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

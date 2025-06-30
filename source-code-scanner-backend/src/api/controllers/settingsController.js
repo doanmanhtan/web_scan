@@ -516,6 +516,52 @@ const settingsController = {
         message: 'Error updating user settings'
       });
     }
+  },
+
+  /**
+   * Get scanner rule by ID
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  getScannerRuleById: async (req, res) => {
+    try {
+      const ruleId = req.params.id;
+      if (!ruleId || !ruleId.includes('_')) {
+        return res.status(400).json({ success: false, message: 'Invalid rule ID' });
+      }
+      const [scanner, ...fileParts] = ruleId.split('_');
+      const fileName = fileParts.join('_');
+      if (!scannerConfig[scanner] || !scannerConfig[scanner].rules) {
+        return res.status(404).json({ success: false, message: 'Scanner or rules directory not found' });
+      }
+      // Tìm file .yaml hoặc .yml
+      const rulesDir = scannerConfig[scanner].rules;
+      let rulePath = path.join(rulesDir, fileName);
+      if (!rulePath.endsWith('.yaml') && !rulePath.endsWith('.yml')) {
+        if (fs.existsSync(path.join(rulesDir, fileName + '.yaml'))) {
+          rulePath = path.join(rulesDir, fileName + '.yaml');
+        } else if (fs.existsSync(path.join(rulesDir, fileName + '.yml'))) {
+          rulePath = path.join(rulesDir, fileName + '.yml');
+        }
+      }
+      if (!fs.existsSync(rulePath)) {
+        return res.status(404).json({ success: false, message: 'Rule file not found' });
+      }
+      const content = await fs.readFile(rulePath, 'utf8');
+      res.status(200).json({
+        success: true,
+        data: {
+          id: ruleId,
+          scanner,
+          name: fileName,
+          path: rulePath,
+          content
+        }
+      });
+    } catch (error) {
+      logger.error(`Error in getScannerRuleById controller: ${error.message}`);
+      res.status(500).json({ success: false, message: 'Error fetching scanner rule' });
+    }
   }
 };
 

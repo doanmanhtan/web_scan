@@ -40,13 +40,18 @@ import {
   Add as AddIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
+import { testToolConnection as testToolConnectionService } from '../../services/settingsService';
+import RuleSettings from './RuleSettings';
 
 const SettingsPage = () => {
   const [tabValue, setTabValue] = useState(0);
+  const [connectionStatus, setConnectionStatus] = useState({});
   const [formData, setFormData] = useState({
     semgrepPath: '/usr/local/bin/semgrep',
     snykPath: '/usr/bin/snyk',
     clangtidyPath: '/usr/bin/clang-tidy',
+    clangSASTPath: '/usr/bin/clang',
+    cppcheckPath: '/usr/bin/cppcheck',
     rulesDirectory: '/path/to/rules',
     outputDirectory: '/path/to/output',
     enableNotifications: true,
@@ -94,9 +99,34 @@ const SettingsPage = () => {
     console.log('Add new rule');
   };
 
-  const testToolConnection = (tool) => {
-    // This would test the connection to the selected tool
-    console.log(`Testing connection to ${tool}`);
+  const testToolConnection = async (tool) => {
+    let path = '';
+    switch (tool) {
+      case 'semgrep':
+        path = formData.semgrepPath;
+        break;
+      case 'snyk':
+        path = formData.snykPath;
+        break;
+      case 'clangtidy':
+        path = formData.clangtidyPath;
+        break;
+      case 'clangSAST':
+        path = formData.clangSASTPath;
+        break;
+      case 'cppcheck':
+        path = formData.cppcheckPath;
+        break;
+      default:
+        break;
+    }
+    setConnectionStatus({ ...connectionStatus, [tool]: { loading: true } });
+    try {
+      const result = await testToolConnectionService(tool, path);
+      setConnectionStatus({ ...connectionStatus, [tool]: { success: true, message: result.message } });
+    } catch (error) {
+      setConnectionStatus({ ...connectionStatus, [tool]: { error: true, message: error.message } });
+    }
   };
 
   return (
@@ -163,6 +193,14 @@ const SettingsPage = () => {
                       >
                         Test Connection
                       </Button>
+                      {connectionStatus.semgrep && (
+                        <Alert 
+                          severity={connectionStatus.semgrep.success ? 'success' : (connectionStatus.semgrep.error ? 'error' : 'info')} 
+                          sx={{ mt: 2 }}
+                        >
+                          {connectionStatus.semgrep.loading ? 'Testing...' : connectionStatus.semgrep.message}
+                        </Alert>
+                      )}
                     </CardContent>
                   </Card>
                   
@@ -197,6 +235,14 @@ const SettingsPage = () => {
                       >
                         Test Connection
                       </Button>
+                      {connectionStatus.snyk && (
+                        <Alert 
+                          severity={connectionStatus.snyk.success ? 'success' : (connectionStatus.snyk.error ? 'error' : 'info')} 
+                          sx={{ mt: 2 }}
+                        >
+                          {connectionStatus.snyk.loading ? 'Testing...' : connectionStatus.snyk.message}
+                        </Alert>
+                      )}
                     </CardContent>
                   </Card>
                 </Grid>
@@ -233,9 +279,104 @@ const SettingsPage = () => {
                       >
                         Test Connection
                       </Button>
+                      {connectionStatus.clangtidy && (
+                        <Alert 
+                          severity={connectionStatus.clangtidy.success ? 'success' : (connectionStatus.clangtidy.error ? 'error' : 'info')} 
+                          sx={{ mt: 2 }}
+                        >
+                          {connectionStatus.clangtidy.loading ? 'Testing...' : connectionStatus.clangtidy.message}
+                        </Alert>
+                      )}
                     </CardContent>
                   </Card>
                   
+                  <Card variant="outlined" sx={{ mb: 3 }}>
+                    <CardHeader 
+                      title="CppCheck" 
+                      subheader="C/C++ Static Analysis Tool"
+                      action={
+                        <IconButton 
+                          aria-label="test connection"
+                          onClick={() => testToolConnection('cppcheck')}
+                        >
+                          <RefreshIcon />
+                        </IconButton>
+                      }
+                    />
+                    <CardContent>
+                      <TextField 
+                        fullWidth 
+                        label="Path to CppCheck" 
+                        variant="outlined"
+                        name="cppcheckPath"
+                        value={formData.cppcheckPath}
+                        onChange={handleFormChange}
+                        helperText="Specify the full path to the cppcheck executable"
+                        sx={{ mb: 2 }}
+                      />
+                      <Button 
+                        variant="outlined" 
+                        size="small"
+                        onClick={() => testToolConnection('cppcheck')}
+                      >
+                        Test Connection
+                      </Button>
+                      {connectionStatus.cppcheck && (
+                        <Alert 
+                          severity={connectionStatus.cppcheck.success ? 'success' : (connectionStatus.cppcheck.error ? 'error' : 'info')} 
+                          sx={{ mt: 2 }}
+                        >
+                          {connectionStatus.cppcheck.loading ? 'Testing...' : connectionStatus.cppcheck.message}
+                        </Alert>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+                 <Grid item xs={12} md={6}>
+                  <Card variant="outlined" sx={{ mb: 3 }}>
+                    <CardHeader 
+                      title="ClangStaticAnalyzer" 
+                      subheader="C/C++ Static Analyzer"
+                      action={
+                        <IconButton 
+                          aria-label="test connection"
+                          onClick={() => testToolConnection('clangSAST')}
+                        >
+                          <RefreshIcon />
+                        </IconButton>
+                      }
+                    />
+                    <CardContent>
+                      <TextField 
+                        fullWidth 
+                        label="Path to Clang" 
+                        variant="outlined"
+                        name="clangSASTPath"
+                        value={formData.clangSASTPath}
+                        onChange={handleFormChange}
+                        helperText="Specify the full path to the clang executable for static analysis"
+                        sx={{ mb: 2 }}
+                      />
+                      <Button 
+                        variant="outlined" 
+                        size="small"
+                        onClick={() => testToolConnection('clangSAST')}
+                      >
+                        Test Connection
+                      </Button>
+                      {connectionStatus.clangSAST && (
+                        <Alert 
+                          severity={connectionStatus.clangSAST.success ? 'success' : (connectionStatus.clangSAST.error ? 'error' : 'info')} 
+                          sx={{ mt: 2 }}
+                        >
+                          {connectionStatus.clangSAST.loading ? 'Testing...' : connectionStatus.clangSAST.message}
+                        </Alert>
+                      )}
+                    </CardContent>
+                  </Card>
+                  
+                </Grid>
+                <Grid item xs={12} md={6}>
                   <Card variant="outlined">
                     <CardHeader 
                       title="Performance Settings" 
@@ -276,122 +417,7 @@ const SettingsPage = () => {
           )}
           
           {tabValue === 1 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Rules Configuration
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Manage your scan rules and custom rule configurations.
-              </Typography>
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <TextField 
-                    fullWidth 
-                    label="Rules Directory" 
-                    variant="outlined"
-                    name="rulesDirectory"
-                    value={formData.rulesDirectory}
-                    onChange={handleFormChange}
-                    helperText="Directory containing custom rule definitions"
-                    sx={{ mb: 3 }}
-                  />
-                  
-                  <FormControl fullWidth sx={{ mb: 3 }}>
-                    <InputLabel>Default Severity</InputLabel>
-                    <Select
-                      name="defaultSeverity"
-                      value={formData.defaultSeverity}
-                      label="Default Severity"
-                      onChange={handleFormChange}
-                    >
-                      <MenuItem value="critical">Critical</MenuItem>
-                      <MenuItem value="high">High</MenuItem>
-                      <MenuItem value="medium">Medium</MenuItem>
-                      <MenuItem value="low">Low</MenuItem>
-                    </Select>
-                  </FormControl>
-                  
-                  <FormGroup>
-                    <FormControlLabel 
-                      control={
-                        <Switch 
-                          checked={formData.scanOnSave} 
-                          onChange={handleFormChange}
-                          name="scanOnSave"
-                        />
-                      } 
-                      label="Scan files on save" 
-                    />
-                    <FormControlLabel 
-                      control={
-                        <Switch 
-                          checked={formData.enableAutoScan} 
-                          onChange={handleFormChange}
-                          name="enableAutoScan"
-                        />
-                      } 
-                      label="Enable automatic periodic scanning" 
-                    />
-                  </FormGroup>
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <Paper variant="outlined" sx={{ mb: 2 }}>
-                    <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="subtitle1">
-                        Custom Rules
-                      </Typography>
-                      <Button 
-                        startIcon={<AddIcon />}
-                        variant="contained"
-                        size="small"
-                        onClick={handleAddRule}
-                      >
-                        Add Rule
-                      </Button>
-                    </Box>
-                    <Divider />
-                    <List>
-                      {customRules.map((rule) => (
-                        <React.Fragment key={rule.id}>
-                          <ListItem
-                            secondaryAction={
-                              <Box>
-                                <Switch
-                                  edge="end"
-                                  checked={rule.enabled}
-                                  onChange={() => handleRuleToggle(rule.id)}
-                                />
-                                <IconButton edge="end" aria-label="edit">
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                                <IconButton edge="end" aria-label="delete">
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Box>
-                            }
-                          >
-                            <ListItemIcon>
-                              <CodeIcon />
-                            </ListItemIcon>
-                            <ListItemText
-                              primary={rule.name}
-                              secondary={rule.path}
-                            />
-                          </ListItem>
-                          {customRules.indexOf(rule) < customRules.length - 1 && <Divider variant="inset" component="li" />}
-                        </React.Fragment>
-                      ))}
-                    </List>
-                  </Paper>
-                  
-                  <Alert severity="info">
-                    Custom rules allow you to define specific patterns to look for in your code. Rules are written in YAML format.
-                  </Alert>
-                </Grid>
-              </Grid>
-            </Box>
+            <RuleSettings />
           )}
           
           {tabValue === 2 && (

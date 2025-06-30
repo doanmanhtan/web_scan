@@ -25,19 +25,24 @@ const scannerConfig = {
     rules: null, // Snyk uses its own rule set
     command: 'code test' // Thêm command cụ thể cho Snyk
   },
-  // clangTidy: {
-  //   path: process.env.CLANGTIDY_PATH || '/usr/bin/clang-tidy',
-  //   defaultArgs: ['-p', '.', '--export-fixes=clang-fixes.yaml'],
-  //   timeoutMs: parseInt(process.env.CLANGTIDY_TIMEOUT_MS) || 300000,
-  //   supportedFileTypes: ['.c', '.cpp', '.h', '.hpp'],
-  //   rules: path.join(__dirname, '../rules/quality')
-  // }
   clangTidy: {
     path: process.env.CLANGTIDY_PATH || '/usr/bin/clang-tidy',
     defaultArgs: [],
     timeoutMs: parseInt(process.env.CLANGTIDY_TIMEOUT_MS) || 300000,
     supportedFileTypes: ['.c', '.cpp', '.h', '.hpp']
     // NO RULES - ClangTidy uses built-in checks
+  },
+  cppcheck: {
+    path: process.env.CPPCHECK_PATH || '/usr/bin/cppcheck',
+    defaultArgs: ['--enable=all', '--xml'],
+    timeoutMs: parseInt(process.env.CPPCHECK_TIMEOUT_MS) || 180000,
+    supportedFileTypes: ['.c', '.cpp', '.h', '.hpp']
+  },
+  clangStaticAnalyzer: {
+    path: process.env.CLANG_STATIC_ANALYZER_PATH || '/usr/bin/scan-build',
+    defaultArgs: ['--status-bugs'],
+    timeoutMs: parseInt(process.env.CLANG_STATIC_ANALYZER_TIMEOUT_MS) || 300000,
+    supportedFileTypes: ['.c', '.cpp', '.h', '.hpp', '.m', '.mm']
   }
 };
 

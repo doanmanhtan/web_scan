@@ -59,6 +59,10 @@ function MainLayout() {
   const handleMenuClose = () => {
     setAnchorEl(null);
   };
+  const handleNewScan = () => {
+    navigate('/scanner');
+  };
+  
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -69,7 +73,7 @@ function MainLayout() {
     <div>
       <Toolbar>
         <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
-          CodeScanPro
+          WEB SCANNER
         </Typography>
       </Toolbar>
       <Divider />
@@ -132,6 +136,7 @@ function MainLayout() {
             color="inherit" 
             startIcon={<SecurityIcon />}
             sx={{ mr: 2 }}
+            onClick={handleNewScan}
           >
             New Scan
           </Button>
