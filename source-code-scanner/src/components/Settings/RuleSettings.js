@@ -34,6 +34,7 @@ import {
   Badge,
   Tooltip,
   CircularProgress,
+  Pagination,
 } from '@mui/material';
 import {
   Code as CodeIcon,
@@ -68,6 +69,14 @@ import {
 } from '../../services/ruleService';
 import { useSnackbar } from 'notistack';
 import RuleDetailView from './RuleDetailView';
+
+const shortenPath = (fullPath) => {
+  if (!fullPath) return '';
+  // Lấy 2 phần cuối của path
+  const parts = fullPath.split('/');
+  if (parts.length <= 2) return fullPath;
+  return '.../' + parts.slice(-3).join('/');
+};
 
 const RuleSettings = () => {
   const [rules, setRules] = useState([]);
@@ -111,6 +120,20 @@ const RuleSettings = () => {
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   
   const { enqueueSnackbar } = useSnackbar();
+
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10); // Số rule mỗi trang
+
+  const paginatedRules = rules.filter(rule => {
+    if (!rule) return false;
+    
+    const matchesSearch = rule.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         rule.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         false;
+    const matchesCategory = selectedCategory === 'all' || rule.category === selectedCategory;
+    const matchesScanner = selectedScanner === 'all' || rule.scanner === selectedScanner;
+    return matchesSearch && matchesCategory && matchesScanner;
+  }).slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
   const fetchRules = useCallback(async () => {
     try {
@@ -168,6 +191,10 @@ const RuleSettings = () => {
       calculateStats();
     }
   }, [rules, calculateStats]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, selectedCategory, selectedScanner, rowsPerPage]);
 
   const handleDirectoryChange = (event) => {
     setRuleDirectory(event.target.value);
@@ -305,37 +332,17 @@ const RuleSettings = () => {
     setSelectedRuleId(null);
   };
 
-  const handleImportRules = (event) => {
+  const handleImportRules = async (event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const content = e.target.result;
-          let importedRules = [];
-          
-          if (file.name.endsWith('.json')) {
-            importedRules = JSON.parse(content);
-          } else if (file.name.endsWith('.yml') || file.name.endsWith('.yaml')) {
-            enqueueSnackbar('YAML import not supported yet. Please use JSON format.', { variant: 'warning' });
-            return;
-          }
-          
-          if (Array.isArray(importedRules)) {
-            // Show preview dialog or directly add rules
-            enqueueSnackbar(`Found ${importedRules.length} rules to import`, { variant: 'info' });
-            // Here you would typically show a preview dialog
-            // For now, just show the count
-          } else {
-            enqueueSnackbar('Invalid file format. Expected an array of rules.', { variant: 'error' });
-          }
-        } catch (err) {
-          enqueueSnackbar('Failed to parse file: ' + err.message, { variant: 'error' });
-        }
-      };
-      reader.readAsText(file);
+      try {
+        await importRules(file); // Gọi API backend
+        enqueueSnackbar('Rules imported successfully', { variant: 'success' });
+        await fetchRules(); // Cập nhật lại danh sách rules
+      } catch (err) {
+        enqueueSnackbar('Failed to import rules: ' + err.message, { variant: 'error' });
+      }
     }
-    // Reset file input
     event.target.value = '';
   };
 
@@ -397,17 +404,6 @@ const RuleSettings = () => {
     }
   };
 
-  const filteredRules = rules.filter(rule => {
-    if (!rule) return false;
-    
-    const matchesSearch = rule.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         rule.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         false;
-    const matchesCategory = selectedCategory === 'all' || rule.category === selectedCategory;
-    const matchesScanner = selectedScanner === 'all' || rule.scanner === selectedScanner;
-    return matchesSearch && matchesCategory && matchesScanner;
-  });
-
   const categories = ['all', 'security', 'performance', 'style', 'memory', 'quality'];
   const scanners = ['all', 'semgrep', 'snyk', 'clangtidy', 'cppcheck'];
 
@@ -439,7 +435,7 @@ const RuleSettings = () => {
       {/* Statistics Cards */}
       {ruleStats && (
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
@@ -451,7 +447,7 @@ const RuleSettings = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
@@ -463,7 +459,7 @@ const RuleSettings = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
@@ -475,7 +471,7 @@ const RuleSettings = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
@@ -491,7 +487,7 @@ const RuleSettings = () => {
       )}
       
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid xs={12} md={6}>
           <TextField 
             fullWidth 
             label="Rules Directory" 
@@ -540,7 +536,7 @@ const RuleSettings = () => {
           </FormGroup>
         </Grid>
         
-        <Grid item xs={12} md={6}>
+        <Grid xs={12} md={6}>
           <Paper variant="outlined" sx={{ mb: 2 }}>
             <CardHeader 
               title="Custom Rules"
@@ -637,7 +633,7 @@ const RuleSettings = () => {
               </Box>
             ) : (
               <List>
-                {filteredRules.map((rule, index) => (
+                {paginatedRules.map((rule, index) => (
                   <React.Fragment key={rule.id || index}>
                     <ListItem>
                       <ListItemIcon>
@@ -663,7 +659,7 @@ const RuleSettings = () => {
                             )}
                           </Box>
                         }
-                        secondary={rule.description || rule.path || 'No description'}
+                        secondary={rule.description || shortenPath(rule.path) || 'No description'}
                       />
                       <ListItemSecondaryAction>
                         <Switch
@@ -688,10 +684,10 @@ const RuleSettings = () => {
                         </Tooltip>
                       </ListItemSecondaryAction>
                     </ListItem>
-                    {index < filteredRules.length - 1 && <Divider variant="inset" component="li" />}
+                    {index < paginatedRules.length - 1 && <Divider variant="inset" component="li" />}
                   </React.Fragment>
                 ))}
-                {filteredRules.length === 0 && !loading && (
+                {paginatedRules.length === 0 && !loading && (
                   <ListItem>
                     <ListItemText
                       primary="No rules found"
@@ -703,6 +699,26 @@ const RuleSettings = () => {
                 )}
               </List>
             )}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
+              <Pagination
+                count={Math.ceil(rules.length / rowsPerPage)}
+                page={page}
+                onChange={(e, value) => setPage(value)}
+                color="primary"
+              />
+              <FormControl size="small" sx={{ minWidth: 100, ml: 2 }}>
+                <InputLabel>Rows</InputLabel>
+                <Select
+                  value={rowsPerPage}
+                  label="Rows"
+                  onChange={e => setRowsPerPage(Number(e.target.value))}
+                >
+                  <MenuItem value={5}>5</MenuItem>
+                  <MenuItem value={20}>20</MenuItem>
+                  <MenuItem value={50}>50</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
           </Paper>
           
           <Alert severity="info" icon={<DescriptionIcon />}>
@@ -735,12 +751,12 @@ const RuleSettings = () => {
             rows={3}
           />
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Category</InputLabel>
                 <Select
                   name="category"
-                  value={newRule.category}
+                  value={newRule.category || 'security'}
                   label="Category"
                   onChange={handleNewRuleChange}
                 >
@@ -752,7 +768,7 @@ const RuleSettings = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Scanner</InputLabel>
                 <Select
@@ -798,7 +814,7 @@ const RuleSettings = () => {
             control={
               <Switch
                 name="enabled"
-                checked={newRule.enabled}
+                checked={newRule.enabled !== undefined ? newRule.enabled : true}
                 onChange={handleNewRuleChange}
               />
             }

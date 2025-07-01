@@ -389,12 +389,16 @@ export const toggleRuleStatus = async (ruleId, enabled) => {
       throw new Error('Rule ID is required');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/settings/rules/${ruleId}/toggle`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ enabled }),
-    });
-    return await handleResponse(response);
+    // Since the toggle endpoint doesn't exist, we'll use updateRule instead
+    // First, we need to get the current rule data
+    const currentRule = await getRuleById(ruleId);
+    if (!currentRule) {
+      throw new Error('Rule not found');
+    }
+
+    // Update the rule with the new enabled status
+    const updatedRule = { ...currentRule, enabled };
+    return await updateRule(ruleId, updatedRule);
   } catch (error) {
     console.error(`Error toggling rule ${ruleId} status:`, error);
     throw error;

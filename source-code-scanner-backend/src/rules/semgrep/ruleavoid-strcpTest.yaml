@@ -1,0 +1,10 @@
+rules:
+  - id: avoid-strcpy
+    patterns:
+      - pattern: strcpy($DST, $SRC)
+    message: Tránh sử dụng hàm strcpy vì có thể gây tràn bộ đệm. Hãy dùng strncpy thay thế.
+    severity: WARNING
+    languages: [c, cpp]
+    metadata:
+      category: security
+      cwe: "CWE-120"

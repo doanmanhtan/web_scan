@@ -48,7 +48,8 @@ import {
   getRulesByCategory,
   getRulesByScanner,
   getEnabledRules,
-  toggleRuleStatus,
+  createRule,
+  updateRule,
   deleteRule,
 } from '../../services/ruleService';
 import { useSnackbar } from 'notistack';
@@ -101,11 +102,16 @@ const RuleList = ({ onRuleSelect, showDetailView = true }) => {
 
   const handleToggleStatus = async (ruleId, currentStatus) => {
     try {
-      await toggleRuleStatus(ruleId, !currentStatus);
+      const ruleToUpdate = rules.find(rule => rule.id === ruleId);
+      if (!ruleToUpdate) return;
+
+      const updatedRule = { ...ruleToUpdate, enabled: !currentStatus };
+      await updateRule(ruleId, updatedRule);
+      
       setRules(rules.map(rule => 
-        rule.id === ruleId ? { ...rule, enabled: !currentStatus } : rule
+        rule.id === ruleId ? updatedRule : rule
       ));
-      enqueueSnackbar(`Rule ${currentStatus ? 'disabled' : 'enabled'} successfully`, { variant: 'success' });
+      enqueueSnackbar(`Rule ${updatedRule.enabled ? 'enabled' : 'disabled'} successfully`, { variant: 'success' });
     } catch (err) {
       enqueueSnackbar(err.message, { variant: 'error' });
     }
@@ -233,7 +239,7 @@ const RuleList = ({ onRuleSelect, showDetailView = true }) => {
     <Box>
       {/* Statistics Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid xs={12} sm={6} md={2}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" gutterBottom>
@@ -245,7 +251,7 @@ const RuleList = ({ onRuleSelect, showDetailView = true }) => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid xs={12} sm={6} md={2}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" gutterBottom>
@@ -257,7 +263,7 @@ const RuleList = ({ onRuleSelect, showDetailView = true }) => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid xs={12} sm={6} md={2}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" gutterBottom>
@@ -269,7 +275,7 @@ const RuleList = ({ onRuleSelect, showDetailView = true }) => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid xs={12} sm={6} md={2}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" gutterBottom>
@@ -281,7 +287,7 @@ const RuleList = ({ onRuleSelect, showDetailView = true }) => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid xs={12} sm={6} md={2}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" gutterBottom>
@@ -293,7 +299,7 @@ const RuleList = ({ onRuleSelect, showDetailView = true }) => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid xs={12} sm={6} md={2}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" gutterBottom>
@@ -310,7 +316,7 @@ const RuleList = ({ onRuleSelect, showDetailView = true }) => {
       {/* Search and Filters */}
       <Paper sx={{ p: 2, mb: 2 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={4}>
+          <Grid xs={12} md={4}>
             <TextField
               fullWidth
               placeholder="Search rules..."
@@ -321,7 +327,7 @@ const RuleList = ({ onRuleSelect, showDetailView = true }) => {
               }}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          <Grid xs={12} sm={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Category</InputLabel>
               <Select
@@ -337,7 +343,7 @@ const RuleList = ({ onRuleSelect, showDetailView = true }) => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          <Grid xs={12} sm={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Scanner</InputLabel>
               <Select
@@ -353,7 +359,7 @@ const RuleList = ({ onRuleSelect, showDetailView = true }) => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          <Grid xs={12} sm={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>Severity</InputLabel>
               <Select
@@ -369,7 +375,7 @@ const RuleList = ({ onRuleSelect, showDetailView = true }) => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          <Grid xs={12} sm={6} md={2}>
             <Button
               fullWidth
               variant={showEnabledOnly ? "contained" : "outlined"}

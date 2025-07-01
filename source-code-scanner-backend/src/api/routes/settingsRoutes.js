@@ -3,6 +3,8 @@ const express = require('express');
 const router = express.Router();
 const settingsController = require('../controllers/settingsController');
 const { authenticate, authorize } = require('../middleware/auth');
+const multer = require('multer');
+const upload = multer();
 
 // All routes require authentication
 router.use(authenticate);
@@ -27,6 +29,9 @@ router.put('/rules/:id', authorize(['admin', 'security_team']), settingsControll
 
 // Delete scanner rule
 router.delete('/rules/:id', authorize(['admin', 'security_team']), settingsController.deleteScannerRule);
+
+// Import scanner rule (upload file)
+router.post('/rules/import', authorize(['admin', 'security_team']), upload.single('file'), settingsController.importScannerRule);
 
 // Get system settings
 router.get('/system', authorize(['admin']), settingsController.getSystemSettings);

@@ -2,7 +2,7 @@ rules:
   - id: c-strcpy-unsafe
     patterns:
       - pattern: strcpy($DEST, $SRC)
-    message: Tránh sử dụng 'strcpy' vì có thể gây tràn bộ đệm. Hãy dùng 'strncpy' hoặc kiểm tra kích thước chuỗi 12.
+    message: Tránh sử dụng 'strcpy' vì có thể gây tràn bộ đệm. Hãy dùng 'strncpy' hoặc kiểm tra kích thước chuỗi.12
     severity: WARNING
     languages:
       - c

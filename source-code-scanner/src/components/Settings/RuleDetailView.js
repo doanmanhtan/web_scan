@@ -59,7 +59,6 @@ import {
   getRuleById,
   updateRule,
   deleteRule,
-  toggleRuleStatus,
   testRule,
   validateRule,
   exportRules,
@@ -135,9 +134,10 @@ const RuleDetailView = ({ ruleId, onClose, onUpdate }) => {
 
   const handleToggleStatus = async () => {
     try {
-      await toggleRuleStatus(ruleId, !rule.enabled);
-      setRule({ ...rule, enabled: !rule.enabled });
-      enqueueSnackbar(`Rule ${rule.enabled ? 'disabled' : 'enabled'} successfully`, { variant: 'success' });
+      const updatedRule = { ...rule, enabled: !rule.enabled };
+      await updateRule(ruleId, updatedRule);
+      setRule(updatedRule);
+      enqueueSnackbar(`Rule ${updatedRule.enabled ? 'enabled' : 'disabled'} successfully`, { variant: 'success' });
     } catch (err) {
       enqueueSnackbar(err.message, { variant: 'error' });
     }
@@ -328,7 +328,7 @@ const RuleDetailView = ({ ruleId, onClose, onUpdate }) => {
         <Box sx={{ p: 3 }}>
           {activeTab === 0 && (
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Rule Name"
@@ -363,7 +363,7 @@ const RuleDetailView = ({ ruleId, onClose, onUpdate }) => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid xs={12} md={6}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Severity</InputLabel>
                   <Select
@@ -435,7 +435,7 @@ const RuleDetailView = ({ ruleId, onClose, onUpdate }) => {
 
           {activeTab === 2 && (
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid xs={12} md={6}>
                 <Card variant="outlined">
                   <CardHeader title="Rule Information" />
                   <CardContent>
@@ -468,7 +468,7 @@ const RuleDetailView = ({ ruleId, onClose, onUpdate }) => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid xs={12} md={6}>
                 <Card variant="outlined">
                   <CardHeader title="Statistics" />
                   <CardContent>

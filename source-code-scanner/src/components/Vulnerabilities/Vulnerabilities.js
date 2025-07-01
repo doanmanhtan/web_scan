@@ -308,7 +308,6 @@ const VulnerabilitiesPage = () => {
       // Method 1: Try dedicated code snippet endpoint
       let response;
       let codeContent = '';
-      
       try {
         response = await fetch(`/api/vulnerabilities/${vulnId}/code-snippet?context=5`, {
           headers: {
@@ -316,11 +315,23 @@ const VulnerabilitiesPage = () => {
             'Content-Type': 'application/json',
           },
         });
-
         if (response.ok) {
           const data = await response.json();
-          codeContent = data.data?.content || data.content || '';
-          console.log('✅ Got code from dedicated endpoint');
+          if (data.data?.snippet && Array.isArray(data.data.snippet)) {
+            codeContent = data.data.snippet.map(line => 
+              typeof line.content === 'string'
+                ? line.content
+                : (typeof line.content === 'object' ? JSON.stringify(line.content) : String(line.content))
+            ).join('\n');
+            setCodeDialog({
+              open: true,
+              vulnerability,
+              code: codeContent,
+              snippet: data.data.snippet,
+              lineNumber: data.data.lineNumber,
+            });
+            return;
+          }
         } else {
           console.log('❌ Dedicated endpoint failed:', response.status);
         }
@@ -337,11 +348,9 @@ const VulnerabilitiesPage = () => {
               'Authorization': `Bearer ${localStorage.getItem('token')}`,
             },
           });
-
           if (vulnResponse.ok) {
             const vulnData = await vulnResponse.json();
             const vuln = vulnData.data || vulnData;
-            
             // Extract file info
             const fileName = typeof vuln.file === 'object' 
               ? (vuln.file.fileName || vuln.file.name)
@@ -349,7 +358,6 @@ const VulnerabilitiesPage = () => {
             const lineNumber = typeof vuln.location === 'object'
               ? vuln.location.line
               : vuln.line;
-
             if (fileName && lineNumber) {
               // Try to get the file content from scan
               const scanId = vuln.scanId || vuln.scan;
@@ -359,7 +367,6 @@ const VulnerabilitiesPage = () => {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                   },
                 });
-
                 if (fileResponse.ok) {
                   const fileData = await fileResponse.json();
                   codeContent = fileData.data?.content || fileData.content || '';
@@ -373,17 +380,9 @@ const VulnerabilitiesPage = () => {
         }
       }
 
-      // Method 3: Generate mock code snippet if still no content
+      // Nếu không lấy được code từ backend, hiển thị lỗi
       if (!codeContent) {
-        const fileName = typeof vulnerability.file === 'object' 
-          ? (vulnerability.file.fileName || vulnerability.file.name || 'unknown.c')
-          : (vulnerability.file || 'unknown.c');
-        const lineNumber = typeof vulnerability.location === 'object'
-          ? vulnerability.location.line
-          : (vulnerability.line || 33);
-        
-        codeContent = generateMockCodeSnippet(fileName, lineNumber, vulnerability);
-        console.log('⚠️ Using mock code snippet');
+        codeContent = 'Không tìm thấy code snippet cho lỗ hổng này.\nVui lòng kiểm tra lại backend hoặc dữ liệu scan.';
       }
 
       // Update dialog with actual code
@@ -392,93 +391,16 @@ const VulnerabilitiesPage = () => {
         vulnerability,
         code: codeContent,
       });
-
     } catch (error) {
       console.error('❌ Error loading code snippet:', error);
-      
-      // Show error in dialog
       setCodeDialog({
         open: true,
         vulnerability,
         code: `Error loading code snippet: ${error.message}\n\nPlease check:\n1. File exists in scan results\n2. Backend API is accessible\n3. Vulnerability has valid file/line information`,
       });
-      
       setError(`Failed to load code: ${error.message}`);
     }
-    
     handleMenuClose();
-  };
-
-  // Helper function to generate realistic mock code
-  const generateMockCodeSnippet = (fileName, lineNumber, vulnerability) => {
-    const startLine = Math.max(1, lineNumber - 5);
-    const endLine = lineNumber + 5;
-    
-    // Generate realistic C code based on vulnerability type
-    const mockLines = [];
-    
-    for (let i = startLine; i <= endLine; i++) {
-      let line = '';
-      
-      if (i === lineNumber) {
-        // This is the problematic line - make it relevant to the vulnerability
-        const vulnType = vulnerability.name || vulnerability.title || '';
-        
-        if (vulnType.includes('double_free') || vulnType.includes('free')) {
-          line = '    free(ptr);  // ⚠️ Potential double free vulnerability';
-        } else if (vulnType.includes('buffer') || vulnType.includes('overflow')) {
-          line = '    strcpy(buffer, input);  // ⚠️ Buffer overflow vulnerability';
-        } else if (vulnType.includes('memory') || vulnType.includes('leak')) {
-          line = '    ptr = malloc(size);  // ⚠️ Memory leak - not freed';
-        } else if (vulnType.includes('static') || vulnType.includes('linkage')) {
-          line = 'double_free() {  // ⚠️ Should have static linkage';
-        } else {
-          line = '    // ⚠️ Vulnerability detected on this line';
-        }
-      } else {
-        // Generate context lines
-        const contextLines = [
-          '#include <stdio.h>',
-          '#include <stdlib.h>',
-          '#include <string.h>',
-          '',
-          'void process_data(char* input) {',
-          '    char buffer[256];',
-          '    char* ptr = NULL;',
-          '    size_t size = strlen(input);',
-          '    ',
-          '    if (size > 0) {',
-          '        ptr = malloc(size + 1);',
-          '        if (ptr != NULL) {',
-          '            strncpy(ptr, input, size);',
-          '            ptr[size] = \'\\0\';',
-          '        }',
-          '    }',
-          '    ',
-          '    // Process the data',
-          '    process_buffer(buffer);',
-          '    ',
-          '    // Cleanup',
-          '    if (ptr) {',
-          '        free(ptr);',
-          '        ptr = NULL;',
-          '    }',
-          '}',
-          '',
-          'static void helper_function() {',
-          '    // Helper implementation',
-          '    return;',
-          '}',
-        ];
-        
-        const contextIndex = (i - startLine) % contextLines.length;
-        line = contextLines[contextIndex];
-      }
-      
-      mockLines.push(`${i.toString().padStart(3, ' ')}: ${line}`);
-    }
-    
-    return mockLines.join('\n');
   };
 
   const handleExportCSV = () => {
@@ -769,6 +691,8 @@ const VulnerabilitiesPage = () => {
               <MenuItem value="semgrep">Semgrep</MenuItem>
               <MenuItem value="snyk">Snyk</MenuItem>
               <MenuItem value="clangtidy">ClangTidy</MenuItem>
+              <MenuItem value="cppcheck">Cppcheck</MenuItem>
+              <MenuItem value="cpplint">clangStaticAnalyzer</MenuItem>
             </Select>
           </FormControl>
           
@@ -932,7 +856,7 @@ const VulnerabilitiesPage = () => {
                   <strong>Description:</strong> {
                     typeof vuln.description === 'string' 
                       ? vuln.description 
-                      : 'No description available'
+                      : JSON.stringify(vuln.description)
                   }
                 </Typography>
                 
@@ -952,7 +876,7 @@ const VulnerabilitiesPage = () => {
                     <strong>Remediation:</strong> {
                       typeof vuln.remediation === 'string' 
                         ? vuln.remediation 
-                        : 'See vulnerability details'
+                        : JSON.stringify(vuln.remediation)
                     }
                   </Typography>
                 )}
@@ -1257,12 +1181,21 @@ const VulnerabilitiesPage = () => {
                         color: '#d4d4d4',
                         backgroundColor: 'transparent',
                       }}>
-                        {codeDialog.code.split('\n').map((line, index) => {
-                          const vulnLine = codeDialog.vulnerability?.location?.line || codeDialog.vulnerability?.line;
-                          const isVulnLine = vulnLine && (index + 1 === vulnLine);
-                          
+                        {(codeDialog.snippet || []).map((line, index) => {
+                          let displayContent;
+                          if (typeof line.content === 'string') {
+                            displayContent = line.content;
+                          } else if (Array.isArray(line.content)) {
+                            displayContent = JSON.stringify(line.content);
+                          } else if (typeof line.content === 'object' && line.content !== null) {
+                            displayContent = JSON.stringify(line.content);
+                          } else {
+                            displayContent = String(line.content);
+                          }
+                          const vulnLine = codeDialog.lineNumber;
+                          const isVulnLine = line.lineNumber === vulnLine || line.isHighlighted;
                           return (
-                            <div 
+                            <div
                               key={index}
                               style={{
                                 backgroundColor: isVulnLine ? 'rgba(255, 0, 0, 0.1)' : 'transparent',
@@ -1272,10 +1205,10 @@ const VulnerabilitiesPage = () => {
                                 lineHeight: '21px',
                               }}
                             >
-                              {line || ' '}
+                              {displayContent}
                               {isVulnLine && (
-                                <span style={{ 
-                                  color: '#f44336', 
+                                <span style={{
+                                  color: '#f44336',
                                   marginLeft: '10px',
                                   fontSize: '12px',
                                   fontWeight: 'bold'
@@ -1369,7 +1302,7 @@ const VulnerabilitiesPage = () => {
                   <strong>Description:</strong> {
                     typeof codeDialog.vulnerability.description === 'string'
                       ? codeDialog.vulnerability.description
-                      : 'No description available'
+                      : JSON.stringify(codeDialog.vulnerability.description)
                   }
                 </Typography>
               </Box>
@@ -1380,24 +1313,38 @@ const VulnerabilitiesPage = () => {
                     <strong>Remediation:</strong> {
                       typeof codeDialog.vulnerability.remediation === 'string'
                         ? codeDialog.vulnerability.remediation
-                        : 'See vulnerability documentation'
+                        : JSON.stringify(codeDialog.vulnerability.remediation)
                     }
                   </Typography>
                 </Box>
               )}
               
-              {codeDialog.vulnerability.references && codeDialog.vulnerability.references.length > 0 && (
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="body2" gutterBottom>
-                    <strong>References:</strong>
-                  </Typography>
-                  {codeDialog.vulnerability.references.map((ref, index) => (
+              {Array.isArray(codeDialog.vulnerability.references) && codeDialog.vulnerability.references.map((ref, index) => {
+                if (typeof ref === 'string') {
+                  // ref là string (URL)
+                  return (
                     <Typography key={index} variant="body2">
                       • <a href={ref} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>{ref}</a>
                     </Typography>
-                  ))}
-                </Box>
-              )}
+                  );
+                } else if (typeof ref === 'object' && ref !== null && ref.url) {
+                  // ref là object có url
+                  return (
+                    <Typography key={index} variant="body2">
+                      • <a href={ref.url} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>
+                          {ref.title || ref.url}
+                        </a>
+                    </Typography>
+                  );
+                } else {
+                  // ref là object khác hoặc kiểu khác
+                  return (
+                    <Typography key={index} variant="body2">
+                      • {JSON.stringify(ref)}
+                    </Typography>
+                  );
+                }
+              })}
             </Paper>
           )}
         </DialogContent>

@@ -562,6 +562,53 @@ const settingsController = {
       logger.error(`Error in getScannerRuleById controller: ${error.message}`);
       res.status(500).json({ success: false, message: 'Error fetching scanner rule' });
     }
+  },
+
+  /**
+   * Import scanner rule from uploaded file
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  importScannerRule: async (req, res) => {
+    try {
+      // Sử dụng multer để lấy file upload
+      const { scanner } = req.body;
+      const file = req.file;
+      if (!scanner || !file) {
+        return res.status(400).json({ success: false, message: 'Scanner and file are required' });
+      }
+      if (!scannerConfig[scanner] || !scannerConfig[scanner].rules) {
+        return res.status(400).json({ success: false, message: 'Unknown scanner or rules directory not found' });
+      }
+      const rulesDir = scannerConfig[scanner].rules;
+      await fs.ensureDir(rulesDir);
+      // Đặt tên file (giữ nguyên tên gốc, tránh trùng thì thêm hậu tố)
+      let fileName = file.originalname;
+      let rulePath = path.join(rulesDir, fileName);
+      let count = 1;
+      while (fs.existsSync(rulePath)) {
+        const ext = path.extname(fileName);
+        const base = path.basename(fileName, ext);
+        fileName = `${base}_imported${count}${ext}`;
+        rulePath = path.join(rulesDir, fileName);
+        count++;
+      }
+      // Lưu file
+      await fs.writeFile(rulePath, file.buffer);
+      res.status(201).json({
+        success: true,
+        message: 'Rule imported successfully',
+        data: {
+          id: `${scanner}_${fileName}`,
+          name: fileName,
+          scanner,
+          path: rulePath
+        }
+      });
+    } catch (error) {
+      logger.error(`Error in importScannerRule controller: ${error.message}`);
+      res.status(500).json({ success: false, message: 'Error importing scanner rule' });
+    }
   }
 };
 
