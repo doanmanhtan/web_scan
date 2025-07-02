@@ -94,20 +94,20 @@ const ScanResults = ({ results, issuesFound, currentFile, scanId }) => {
       fetchVulnsWithSnippet();
     } else {
       // fallback: process prop results như cũ
-      let vulnerabilities = [];
-      if (Array.isArray(results)) {
-        vulnerabilities = results.map(v => ({ ...v, id: v.id || v._id }));
-      } else if (results && typeof results === 'object') {
-        if (Array.isArray(results.vulnerabilities)) {
-          vulnerabilities = results.vulnerabilities.map(v => ({ ...v, id: v.id || v._id }));
-        } else if (Array.isArray(results.issues)) {
-          vulnerabilities = results.issues.map(v => ({ ...v, id: v.id || v._id }));
-        } else if (Array.isArray(results.data)) {
-          vulnerabilities = results.data.map(v => ({ ...v, id: v.id || v._id }));
-        } else if (results.data && Array.isArray(results.data.vulnerabilities)) {
-          vulnerabilities = results.data.vulnerabilities.map(v => ({ ...v, id: v.id || v._id }));
-        }
+    let vulnerabilities = [];
+    if (Array.isArray(results)) {
+      vulnerabilities = results.map(v => ({ ...v, id: v.id || v._id }));
+    } else if (results && typeof results === 'object') {
+      if (Array.isArray(results.vulnerabilities)) {
+        vulnerabilities = results.vulnerabilities.map(v => ({ ...v, id: v.id || v._id }));
+      } else if (Array.isArray(results.issues)) {
+        vulnerabilities = results.issues.map(v => ({ ...v, id: v.id || v._id }));
+      } else if (Array.isArray(results.data)) {
+        vulnerabilities = results.data.map(v => ({ ...v, id: v.id || v._id }));
+      } else if (results.data && Array.isArray(results.data.vulnerabilities)) {
+        vulnerabilities = results.data.vulnerabilities.map(v => ({ ...v, id: v.id || v._id }));
       }
+    }
       processVulns(vulnerabilities);
     }
     return () => { ignore = true; };

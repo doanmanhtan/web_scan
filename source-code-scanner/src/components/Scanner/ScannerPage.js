@@ -46,10 +46,14 @@ function ScannerPage() {
     pauseScan,
     stopScan,
     issuesFound,
-    results, // ✅ Add results from context
-    scanError, // ✅ Add scanError for debugging
+    results,
+    scanError,
     scan,
-    setScan
+    setScan,
+    // ✅ THÊM CÁC PROPS CHO SCAN NAME
+    scanName,
+    setScanName,
+    generateDefaultScanName,
   } = useScan();
 
   const handleNext = () => {
@@ -78,6 +82,11 @@ function ScannerPage() {
     } else {
       setSelectedTools([...selectedTools, tool]);
     }
+  };
+
+  // ✅ THÊM HANDLER CHO SCAN NAME
+  const handleScanNameChange = (name) => {
+    setScanName(name);
   };
 
   const handleStartScan = async () => {
@@ -121,7 +130,29 @@ function ScannerPage() {
               onToolSelection={handleToolSelection}
               selectedTools={selectedTools}
               scanType={scanType}
+              // ✅ THÊM PROPS CHO SCAN NAME
+              scanName={scanName}
+              onScanNameChange={handleScanNameChange}
             />
+            
+            {/* ✅ HIỂN THỊ PREVIEW TÊN SCAN */}
+            <Paper sx={{ p: 2, mt: 3, bgcolor: 'grey.50' }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Scan Preview:
+              </Typography>
+              <Typography variant="body2">
+                <strong>Name:</strong> {scanName.trim() || generateDefaultScanName()}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Type:</strong> {scanType}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Tools:</strong> {selectedTools.join(', ')}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Files:</strong> {files.length} selected
+              </Typography>
+            </Paper>
           </Box>
         );
       case 2:
@@ -132,6 +163,18 @@ function ScannerPage() {
               <Alert severity="error" sx={{ mb: 3 }}>
                 {scanError}
               </Alert>
+            )}
+            
+            {/* ✅ HIỂN THỊ THÔNG TIN SCAN ĐANG CHẠY */}
+            {isScanning && (
+              <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+                <Typography variant="h6" gutterBottom>
+                  Running Scan: {scanName.trim() || generateDefaultScanName()}
+                </Typography>
+                <Typography variant="body2">
+                  Status: {currentFile}
+                </Typography>
+              </Paper>
             )}
             
             {/* ✅ Show progress while scanning */}
@@ -146,7 +189,14 @@ function ScannerPage() {
             
             {/* ✅ Show results when scan is complete */}
             {!isScanning && progress === 100 && (
-              <Box sx={{ mt: 3 }}>               
+              <Box sx={{ mt: 3 }}>
+                {/* ✅ THÊM THÔNG TIN SCAN HOÀN THÀNH */}
+                <Paper sx={{ p: 2, mb: 3, bgcolor: 'success.light', color: 'success.contrastText' }}>
+                  <Typography variant="h6" gutterBottom>
+                    ✅ Scan Completed: {scanName.trim() || generateDefaultScanName()}
+                  </Typography>
+                </Paper>
+                
                 {/* ✅ Pass all necessary props to ScanResults */}
                 <ScanResults 
                   results={results} 
@@ -164,6 +214,7 @@ function ScannerPage() {
   };
 
   console.log('scan object:', scan);
+  console.log('scanName from context:', scanName);
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -218,7 +269,7 @@ function ScannerPage() {
                 startIcon={<StartIcon />}
                 disabled={files.length === 0 || selectedTools.length === 0}
               >
-                Start Scan
+                Start Scan: {scanName.trim() || generateDefaultScanName()}
               </Button>
             )}
             {activeStep === 0 && (

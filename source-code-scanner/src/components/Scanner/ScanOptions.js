@@ -33,6 +33,7 @@ import {
   Settings as SettingsIcon,
   CheckCircle as CheckCircleIcon,
   BugReport as BugIcon,
+  DriveFileRenameOutline as NameIcon,
 } from '@mui/icons-material';
 
 // Mock data for rules
@@ -49,7 +50,15 @@ const mockRules = [
   { id: 10, name: 'Expensive Copy', category: 'performance', tool: 'clangtidy', enabled: true },
 ];
 
-const ScanOptions = ({ onScanTypeChange, onToolSelection, selectedTools, scanType = 'all' }) => {
+const ScanOptions = ({ 
+  onScanTypeChange, 
+  onToolSelection, 
+  selectedTools, 
+  scanType = 'all',
+  // ✅ THÊM CÁC PROPS MỚI CHO SCAN NAME
+  scanName = '',
+  onScanNameChange
+}) => {
   const [ruleDirectory, setRuleDirectory] = useState('./rules');
   const [includeWarnings, setIncludeWarnings] = useState(true);
   const [generateReport, setGenerateReport] = useState(true);
@@ -108,9 +117,41 @@ const ScanOptions = ({ onScanTypeChange, onToolSelection, selectedTools, scanTyp
       .length;
   };
 
+  // ✅ HÀM TẠO TÊN MẶC ĐỊNH
+  const generateDefaultName = () => {
+    const now = new Date();
+    const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const time = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+    return `Security Scan ${date} ${time}`;
+  };
+
+  // ✅ HÀM XỬ LÝ KHI NGƯỜI DÙNG THAY ĐỔI TÊN SCAN
+  const handleScanNameChange = (event) => {
+    if (onScanNameChange) {
+      onScanNameChange(event.target.value);
+    }
+  };
+
   return (
     <Box>
       <Grid container spacing={3}>
+        {/* ✅ THÊM TRƯỜNG SCAN NAME */}
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Scan Name"
+            value={scanName}
+            onChange={handleScanNameChange}
+            placeholder={generateDefaultName()}
+            helperText={`If left empty, will use: "${generateDefaultName()}"`}
+            variant="outlined"
+            InputProps={{
+              startAdornment: <NameIcon sx={{ mr: 1, color: 'action.active' }} />,
+            }}
+            sx={{ mb: 2 }}
+          />
+        </Grid>
+
         <Grid item xs={12} md={6}>
           <FormControl fullWidth>
             <InputLabel>Scan Type</InputLabel>
@@ -127,18 +168,6 @@ const ScanOptions = ({ onScanTypeChange, onToolSelection, selectedTools, scanTyp
             </Select>
           </FormControl>
         </Grid>
-        
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Rule Directory"
-            value={ruleDirectory}
-            onChange={(e) => setRuleDirectory(e.target.value)}
-            helperText="Directory containing custom rule definitions"
-            variant="outlined"
-          />
-        </Grid>
-        
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
             Select Analysis Tools

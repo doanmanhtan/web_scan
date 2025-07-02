@@ -31,23 +31,64 @@ const FileUploader = ({ onFileUpload }) => {
     }
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const uploadedFiles = Array.from(e.dataTransfer.files).map(file => ({
-        name: file.name,
-        path: file.path || URL.createObjectURL(file),
-        size: file.size,
-        type: file.type,
-        lastModified: file.lastModified,
-        isDirectory: file.isDirectory || false,
-        file: file
-      }));
-      
-      onFileUpload(uploadedFiles);
+
+    const items = e.dataTransfer.items;
+    if (items && items.length > 0) {
+      const allFiles = [];
+
+      // Hàm đệ quy để duyệt thư mục
+      const traverseFileTree = (item, path = "") =>
+        new Promise((resolve) => {
+          if (item.isFile) {
+            item.file((file) => {
+              // Chỉ nhận file mã nguồn
+              if (/\.(c|cpp|h|hpp)$/i.test(file.name)) {
+                file.fullPath = path + file.name;
+                allFiles.push({
+                  name: file.name,
+                  path: path + file.name,
+                  size: file.size,
+                  type: file.type,
+                  lastModified: file.lastModified,
+                  isDirectory: false,
+                  file: file
+                });
+              }
+              resolve();
+            });
+          } else if (item.isDirectory) {
+            const dirReader = item.createReader();
+            dirReader.readEntries(async (entries) => {
+              for (const entry of entries) {
+                await traverseFileTree(entry, path + item.name + "/");
+              }
+              resolve();
+            });
+          } else {
+            resolve();
+          }
+        });
+
+      // Duyệt qua tất cả item
+      const traverseAll = async () => {
+        const promises = [];
+        for (let i = 0; i < items.length; i++) {
+          const entry = items[i].webkitGetAsEntry();
+          if (entry) {
+            promises.push(traverseFileTree(entry, ""));
+          }
+        }
+        await Promise.all(promises);
+      };
+
+      await traverseAll();
+
+      // Truyền lên toàn bộ file mã nguồn
+      onFileUpload(allFiles);
     }
   };
 
@@ -70,17 +111,19 @@ const FileUploader = ({ onFileUpload }) => {
 
   const handleDirectoryInput = (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      // In real implementation, handling directories requires some additional work
-      // This is a simplified version
-      const directory = {
-        name: e.target.files[0].webkitRelativePath.split('/')[0],
-        path: e.target.files[0].webkitRelativePath.split('/')[0],
-        files: Array.from(e.target.files),
-        isDirectory: true,
-      };
-      
-      onFileUpload([directory]);
-      e.target.value = null; // Reset input
+      const uploadedFiles = Array.from(e.target.files)
+        .filter(file => /\.(c|cpp|h|hpp)$/i.test(file.name))
+        .map(file => ({
+          name: file.name,
+          path: file.webkitRelativePath,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified,
+          isDirectory: false,
+          file: file
+        }));
+      onFileUpload(uploadedFiles); // Upload ngay khi chọn thư mục
+      e.target.value = null;
     }
   };
 
