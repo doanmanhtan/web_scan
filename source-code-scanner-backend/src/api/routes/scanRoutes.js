@@ -53,4 +53,7 @@ router.get('/system/check-scanners', scanController.checkScannerInstallation);
 // Get scan statistics
 router.get('/stats/summary', scanController.getScanStats);
 
+// Get vulnerabilities with code snippet by scan ID
+router.get('/:id/vulnerabilities-with-snippet', scanController.getVulnerabilitiesWithSnippet);
+
 module.exports = router;

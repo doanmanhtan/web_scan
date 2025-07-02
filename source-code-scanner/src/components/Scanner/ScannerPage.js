@@ -47,7 +47,9 @@ function ScannerPage() {
     stopScan,
     issuesFound,
     results, // ✅ Add results from context
-    scanError // ✅ Add scanError for debugging
+    scanError, // ✅ Add scanError for debugging
+    scan,
+    setScan
   } = useScan();
 
   const handleNext = () => {
@@ -150,6 +152,7 @@ function ScannerPage() {
                   results={results} 
                   issuesFound={issuesFound}
                   currentFile={currentFile}
+                  scanId={scan?._id || scan?.scanId}
                 />
               </Box>
             )}
@@ -159,6 +162,8 @@ function ScannerPage() {
         return 'Unknown step';
     }
   };
+
+  console.log('scan object:', scan);
 
   return (
     <Box sx={{ width: '100%' }}>

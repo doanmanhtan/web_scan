@@ -34,8 +34,12 @@ import {
   ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import axios from 'axios';
 
-const ScanResults = ({ results, issuesFound, currentFile }) => {
+const getToken = () => localStorage.getItem('token');
+
+const ScanResults = ({ results, issuesFound, currentFile, scanId }) => {
+  const token = getToken();
   const [tabValue, setTabValue] = useState(0);
   const [processedData, setProcessedData] = useState({
     vulnerabilities: [],
@@ -43,54 +47,84 @@ const ScanResults = ({ results, issuesFound, currentFile }) => {
     toolCounts: {},
     totalCount: 0
   });
+  const [snippetMap, setSnippetMap] = useState({});
+  const [loadingSnippetId, setLoadingSnippetId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   // Data processing
   useEffect(() => {
-    console.log('🎯 ScanResults processing data...');
-    console.log('Results:', results);
-    console.log('Issues found:', issuesFound);
-
-    let vulnerabilities = [];
-
-    if (Array.isArray(results)) {
-      vulnerabilities = results;
-    } else if (results && typeof results === 'object') {
-      if (Array.isArray(results.vulnerabilities)) {
-        vulnerabilities = results.vulnerabilities;
-      } else if (Array.isArray(results.issues)) {
-        vulnerabilities = results.issues;
-      } else if (Array.isArray(results.data)) {
-        vulnerabilities = results.data;
-      } else if (results.data && Array.isArray(results.data.vulnerabilities)) {
-        vulnerabilities = results.data.vulnerabilities;
+    let ignore = false;
+    async function fetchVulnsWithSnippet() {
+      if (!scanId) return;
+      setLoading(true);
+      try {
+        const res = await axios.get(`/api/scans/${scanId}/vulnerabilities-with-snippet`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (!ignore && res.data && res.data.success) {
+          processVulns(res.data.data);
+        }
+      } catch (e) {
+        if (!ignore) processVulns([]);
       }
+      setLoading(false);
     }
-
-    console.log('Processed vulnerabilities:', vulnerabilities.length);
-
-    // Count severities and tools
-    const severityCounts = { critical: 0, high: 0, medium: 0, low: 0 };
-    const toolCounts = {};
-
-    vulnerabilities.forEach((vuln) => {
-      const severity = (vuln.severity || 'low').toLowerCase();
-      if (severityCounts.hasOwnProperty(severity)) {
-        severityCounts[severity]++;
-      } else {
-        severityCounts.low++;
+    function processVulns(vulnerabilities) {
+      // Count severities and tools
+      const severityCounts = { critical: 0, high: 0, medium: 0, low: 0 };
+      const toolCounts = {};
+      vulnerabilities.forEach((vuln) => {
+        const severity = (vuln.severity || 'low').toLowerCase();
+        if (severityCounts.hasOwnProperty(severity)) {
+          severityCounts[severity]++;
+        } else {
+          severityCounts.low++;
+        }
+        const tool = vuln.tool || 'unknown';
+        toolCounts[tool] = (toolCounts[tool] || 0) + 1;
+      });
+      setProcessedData({
+        vulnerabilities,
+        severityCounts,
+        toolCounts,
+        totalCount: vulnerabilities.length
+      });
+    }
+    if (scanId && token) {
+      fetchVulnsWithSnippet();
+    } else {
+      // fallback: process prop results như cũ
+      let vulnerabilities = [];
+      if (Array.isArray(results)) {
+        vulnerabilities = results.map(v => ({ ...v, id: v.id || v._id }));
+      } else if (results && typeof results === 'object') {
+        if (Array.isArray(results.vulnerabilities)) {
+          vulnerabilities = results.vulnerabilities.map(v => ({ ...v, id: v.id || v._id }));
+        } else if (Array.isArray(results.issues)) {
+          vulnerabilities = results.issues.map(v => ({ ...v, id: v.id || v._id }));
+        } else if (Array.isArray(results.data)) {
+          vulnerabilities = results.data.map(v => ({ ...v, id: v.id || v._id }));
+        } else if (results.data && Array.isArray(results.data.vulnerabilities)) {
+          vulnerabilities = results.data.vulnerabilities.map(v => ({ ...v, id: v.id || v._id }));
+        }
       }
+      processVulns(vulnerabilities);
+    }
+    return () => { ignore = true; };
+  }, [scanId, token, results, issuesFound]);
 
-      const tool = vuln.tool || 'unknown';
-      toolCounts[tool] = (toolCounts[tool] || 0) + 1;
-    });
+  useEffect(() => {
+    const missing = processedData.vulnerabilities.filter(
+      v => v.id && !(v.snippet || v.codeSnippet || v.code_snippet || v.code || snippetMap[v.id])
+    );
+    if (missing.length > 0) {
+      missing.forEach(vuln => fetchSnippetById(vuln));
+    }
+  }, [processedData.vulnerabilities]);
 
-    setProcessedData({
-      vulnerabilities,
-      severityCounts,
-      toolCounts,
-      totalCount: vulnerabilities.length
-    });
-  }, [results, issuesFound]);
+  useEffect(() => {
+    console.log('snippetMap:', snippetMap);
+  }, [snippetMap]);
 
   const { vulnerabilities, severityCounts, toolCounts, totalCount } = processedData;
 
@@ -139,6 +173,53 @@ const ScanResults = ({ results, issuesFound, currentFile }) => {
 
   const toolChartData = Object.entries(toolCounts).map(([name, value]) => ({ name, value }));
 
+  // Hàm fetch snippet theo id nếu chưa có
+  const fetchSnippetById = async (vuln) => {
+    if (!vuln || !vuln.id) return;
+    setLoadingSnippetId(vuln.id);
+    try {
+      const res = await fetch(`/api/vulnerabilities/${vuln.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        // Log response để debug
+        console.log('API response for snippet:', data);
+        // Ưu tiên lấy codeSnippet, sau đó đến snippet, hoặc các trường khác
+        const snippet = data.codeSnippet || data.snippet || (data.data && (data.data.codeSnippet || data.data.snippet));
+        if (snippet) {
+          setSnippetMap(prev => ({ ...prev, [vuln.id]: snippet }));
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching snippet:', e);
+    } finally {
+      setLoadingSnippetId(null);
+    }
+  };
+
+  const isValidSnippet = (snippet) => {
+    if (!snippet) return false;
+    if (Array.isArray(snippet)) {
+      return snippet.some(line =>
+        line &&
+        typeof line.lineNumber !== 'undefined' &&
+        typeof line.content === 'string' &&
+        line.content.trim() !== '' &&
+        line.content !== 'requires login' &&
+        line.content !== 'No code snippet available' &&
+        line.content !== 'Code snippet not available'
+      );
+    }
+    if (typeof snippet === 'object' && snippet.line) {
+      return (
+        snippet.line !== 'requires login' &&
+        snippet.line !== 'No code snippet available' &&
+        snippet.line !== 'Code snippet not available' &&
+        snippet.line.trim() !== ''
+      );
+    }
+    return false;
+  };
+
   // Special case: Have issuesFound but no vulnerabilities
   if (issuesFound > 0 && vulnerabilities.length === 0) {
     return (
@@ -169,6 +250,8 @@ const ScanResults = ({ results, issuesFound, currentFile }) => {
       </Paper>
     );
   }
+
+  console.log('scanId truyền vào:', scanId, 'token truyền vào:', token);
 
   return (
     <Box>
@@ -367,9 +450,11 @@ const ScanResults = ({ results, issuesFound, currentFile }) => {
                       />
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" fontWeight="bold">
-                        {vuln.name || vuln.title || 'Unknown'}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" fontWeight="bold">
+                          {vuln.name || vuln.title || 'Unknown'}
+                        </Typography>
+                      </Box>
                     </TableCell>
                     <TableCell>{vuln.type || vuln.vulnerabilityType || 'Unknown'}</TableCell>
                     <TableCell>
@@ -432,56 +517,19 @@ const ScanResults = ({ results, issuesFound, currentFile }) => {
               return vuln.column || 1;
             })();
 
-            // Generate code snippet
-            const generateCodeSnippet = () => {
-              if (vuln.name && vuln.name.toLowerCase().includes('double free')) {
-                return {
-                  beforeLines: [
-                    '    char* ptr = malloc(100);',
-                    '    if (ptr == NULL) return -1;',
-                    '    // ... some processing ...'
-                  ],
-                  vulnerableLine: '    free(ptr);  // ⚠️ Potential double free vulnerability',
-                  afterLines: [
-                    '    // ... more code ...',
-                    '    free(ptr);  // ❌ Second free() call',
-                    '    return 0;'
-                  ],
-                  startLine: Math.max(1, lineNumber - 3)
-                };
-              }
-              
-              if (vuln.name && vuln.name.toLowerCase().includes('buffer overflow')) {
-                return {
-                  beforeLines: [
-                    '    char buffer[10];',
-                    '    char* source = "This is a very long string";'
-                  ],
-                  vulnerableLine: '    strcpy(buffer, source);  // ⚠️ Buffer overflow detected',
-                  afterLines: [
-                    '    printf("Buffer: %s\\n", buffer);',
-                    '    return 0;'
-                  ],
-                  startLine: Math.max(1, lineNumber - 2)
-                };
-              }
+            // Lấy code snippet thực tế từ dữ liệu scan hoặc từ snippetMap
+            let snippet =
+              vuln.codeSnippet ||
+              vuln.snippet ||
+              vuln.code_snippet ||
+              vuln.code ||
+              (snippetMap[vuln.id] ? snippetMap[vuln.id] : []);
+            // Log để debug giá trị snippetMap và snippet
+            if (index === 0) {
+              console.log('snippetMap:', snippetMap);
+              console.log('Current vuln.id:', vuln.id, 'snippet:', snippet);
+            }
 
-              return {
-                beforeLines: [
-                  '    // Function implementation',
-                  '    int result = 0;'
-                ],
-                vulnerableLine: '    return result;  // ⚠️ Security issue detected here',
-                afterLines: [
-                  '}',
-                  ''
-                ],
-                startLine: Math.max(1, lineNumber - 2)
-              };
-            };
-
-            const codeSnippet = generateCodeSnippet();
-            
             return (
               <Accordion key={index} sx={{ mb: 2 }}>
                 <AccordionSummary 
@@ -542,89 +590,76 @@ const ScanResults = ({ results, issuesFound, currentFile }) => {
                       </Typography>
                     </Box>
 
-                    {/* Code lines */}
+                    {/* Code lines thực tế */}
                     <Box sx={{ p: 0 }}>
-                      {/* Before lines */}
-                      {codeSnippet.beforeLines.map((line, idx) => (
-                        <Box key={`before-${idx}`} sx={{ 
-                          display: 'flex', 
-                          minHeight: '24px',
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }
-                        }}>
-                          <Box sx={{ 
-                            width: 60, 
-                            textAlign: 'right', 
-                            pr: 2, 
-                            py: 0.5,
-                            bgcolor: '#1e1e1e', 
-                            color: '#858585',
-                            fontSize: '0.75rem',
-                            borderRight: '1px solid #3e3e42'
-                          }}>
-                            {codeSnippet.startLine + idx}
+                      {loadingSnippetId === vuln.id ? (
+                        <Box sx={{ p: 2, color: '#858585', fontStyle: 'italic' }}>Loading code snippet...</Box>
+                      ) : (
+                        isValidSnippet(snippet) ? (
+                          Array.isArray(snippet) ? snippet.map((line, idx) => {
+                            let displayContent;
+                            if (typeof line.content === 'string') {
+                              displayContent = line.content;
+                            } else if (Array.isArray(line.content)) {
+                              displayContent = JSON.stringify(line.content);
+                            } else if (typeof line.content === 'object' && line.content !== null) {
+                              displayContent = JSON.stringify(line.content);
+                            } else {
+                              displayContent = String(line.content);
+                            }
+                            const isVulnLine = line.isHighlighted || (line.lineNumber === lineNumber);
+                            return (
+                              <Box key={idx} sx={{ display: 'flex', minHeight: '24px', bgcolor: isVulnLine ? 'rgba(244, 67, 54, 0.1)' : 'transparent' }}>
+                                <Box sx={{
+                                  width: 60,
+                                  textAlign: 'right',
+                                  pr: 2,
+                                  py: 0.5,
+                                  bgcolor: isVulnLine ? 'rgba(244, 67, 54, 0.2)' : '#1e1e1e',
+                                  color: isVulnLine ? '#ff6b6b' : '#858585',
+                                  fontSize: '0.75rem',
+                                  fontWeight: isVulnLine ? 'bold' : 'normal',
+                                  borderRight: isVulnLine ? '1px solid #f44336' : '1px solid #3e3e42'
+                                }}>
+                                  {line.lineNumber}
+                                </Box>
+                                <Box sx={{ flex: 1, px: 2, py: 0.5, fontSize: '0.875rem', color: isVulnLine ? '#ffcccb' : undefined, fontWeight: isVulnLine ? 500 : undefined }}>
+                                  {displayContent}
+                                  {isVulnLine && (
+                                    <span style={{
+                                      color: '#f44336',
+                                      marginLeft: '10px',
+                                      fontSize: '12px',
+                                      fontWeight: 'bold'
+                                    }}>
+                                      ← Vulnerability detected here
+                                    </span>
+                                  )}
+                                </Box>
+                              </Box>
+                            );
+                          }) : (
+                            <Box>
+                              {snippet.before && snippet.before.map((l, i) => (
+                                <Box key={`before-${i}`}>{l}</Box>
+                              ))}
+                              <Box sx={{ bgcolor: 'rgba(244, 67, 54, 0.1)', fontWeight: 'bold' }}>
+                                {snippet.line}
+                                <span style={{ color: '#f44336', marginLeft: 10, fontSize: 12, fontWeight: 'bold' }}>
+                                  ← Vulnerability detected here
+                                </span>
+                              </Box>
+                              {snippet.after && snippet.after.map((l, i) => (
+                                <Box key={`after-${i}`}>{l}</Box>
+                              ))}
+                            </Box>
+                          )
+                        ) : (
+                          <Box sx={{ p: 2, color: '#858585', fontStyle: 'italic' }}>
+                            Không có đoạn mã nguồn cho lỗ hổng này.
                           </Box>
-                          <Box sx={{ flex: 1, px: 2, py: 0.5, fontSize: '0.875rem' }}>
-                            {line}
-                          </Box>
-                        </Box>
-                      ))}
-                      
-                      {/* Vulnerable line - highlighted */}
-                      <Box sx={{ 
-                        display: 'flex', 
-                        minHeight: '24px',
-                        bgcolor: 'rgba(244, 67, 54, 0.1)',
-                        borderLeft: '4px solid #f44336'
-                      }}>
-                        <Box sx={{ 
-                          width: 56, 
-                          textAlign: 'right', 
-                          pr: 2, 
-                          py: 0.5,
-                          bgcolor: 'rgba(244, 67, 54, 0.2)', 
-                          color: '#ff6b6b',
-                          fontSize: '0.75rem',
-                          fontWeight: 'bold',
-                          borderRight: '1px solid #f44336'
-                        }}>
-                          {codeSnippet.startLine + codeSnippet.beforeLines.length}
-                        </Box>
-                        <Box sx={{ 
-                          flex: 1, 
-                          px: 2, 
-                          py: 0.5, 
-                          fontSize: '0.875rem',
-                          color: '#ffcccb',
-                          fontWeight: 500
-                        }}>
-                          {codeSnippet.vulnerableLine}
-                        </Box>
-                      </Box>
-                      
-                      {/* After lines */}
-                      {codeSnippet.afterLines.map((line, idx) => (
-                        <Box key={`after-${idx}`} sx={{ 
-                          display: 'flex', 
-                          minHeight: '24px',
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }
-                        }}>
-                          <Box sx={{ 
-                            width: 60, 
-                            textAlign: 'right', 
-                            pr: 2, 
-                            py: 0.5,
-                            bgcolor: '#1e1e1e', 
-                            color: '#858585',
-                            fontSize: '0.75rem',
-                            borderRight: '1px solid #3e3e42'
-                          }}>
-                            {codeSnippet.startLine + codeSnippet.beforeLines.length + 1 + idx}
-                          </Box>
-                          <Box sx={{ flex: 1, px: 2, py: 0.5, fontSize: '0.875rem' }}>
-                            {line}
-                          </Box>
-                        </Box>
-                      ))}
+                        )
+                      )}
                     </Box>
                   </Box>
 

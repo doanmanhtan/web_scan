@@ -28,6 +28,7 @@ export const ScanProvider = ({ children }) => {
     availableTools: [], // New state for tools fetched from backend
     loadingTools: true, // New state for loading status of tools
     scanError: null, // Specific error for scan operations
+    scan: null, // <-- thêm dòng này
   });
 
   // FIXED: Use hardcoded tools instead of API call
@@ -600,6 +601,7 @@ export const ScanProvider = ({ children }) => {
           ...prev,
           progress: Math.round(currentProgress),
           currentFile: `${scan.status}: ${scan.currentFile || 'Processing...'}`,
+          scan, // <-- thêm dòng này để lưu object scan vào context
         }));
         
         console.log(`📊 Progress: ${Math.round(currentProgress)}% | Status: ${scan.status} | Poll: ${pollCount}`);

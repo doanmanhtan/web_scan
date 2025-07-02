@@ -1,5 +1,7 @@
 const scanService = require('../../services/scanService');
 const logger = require('../../utils/logger');
+const vulnerabilityService = require('../../services/vulnerabilityService');
+const codeParser = require('../../utils/codeParser');
 
 /**
  * Scan controller
@@ -437,7 +439,41 @@ const scanController = {
         message: 'Error fetching scan statistics'
       });
     }
-  }
+  },
+
+  /**
+   * Get vulnerabilities with code snippet by scan ID
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  getVulnerabilitiesWithSnippet: async (req, res) => {
+    try {
+      const scanId = req.params.id;
+      const scan = await scanService.getScanById(scanId);
+      if (!scan) {
+        return res.status(404).json({ success: false, message: 'Scan not found' });
+      }
+      const vulnerabilities = await vulnerabilityService.getVulnerabilitiesByScan(scanId, {}, 1000, 0);
+      const { getCodeSnippet } = codeParser;
+      // Lấy codeSnippet cho từng vuln
+      const results = await Promise.all(
+        vulnerabilities.vulnerabilities.map(async (vuln) => {
+          let codeSnippet = null;
+          try {
+            if (vuln.file && vuln.file.filePath && vuln.location && vuln.location.line) {
+              const filePath = require('path').join(scan.scanDirectory, 'uploads', vuln.file.filePath);
+              codeSnippet = (await getCodeSnippet(filePath, vuln.location.line, 3)).snippet;
+            }
+          } catch (e) { codeSnippet = null; }
+          return { ...vuln.toObject ? vuln.toObject() : vuln, codeSnippet };
+        })
+      );
+      res.status(200).json({ success: true, data: results });
+    } catch (error) {
+      require('../../utils/logger').error('Error in getVulnerabilitiesWithSnippet:', error.message);
+      res.status(500).json({ success: false, message: 'Error fetching vulnerabilities with snippet' });
+    }
+  },
   
 };
 
