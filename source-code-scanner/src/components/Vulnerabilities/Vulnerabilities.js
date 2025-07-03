@@ -54,6 +54,7 @@ import {
   Edit as EditIcon,
   Comment as CommentIcon,
   Visibility as VisibilityIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { InsertDriveFile as InsertDriveFileIcon } from '@mui/icons-material';
@@ -78,6 +79,7 @@ const VulnerabilitiesPage = () => {
   const [codeDialog, setCodeDialog] = useState({ open: false, vulnerability: null, code: '' });
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedVuln, setSelectedVuln] = useState(null);
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, vulnerability: null });
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -134,7 +136,13 @@ const VulnerabilitiesPage = () => {
       console.log('API Response:', data);
       
       if (data.success) {
-        const vulnData = data.data.vulnerabilities || [];
+        let vulnData = data.data.vulnerabilities || [];
+        // Sort by createdAt descending (newest first)
+        vulnData = vulnData.slice().sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateB - dateA;
+        });
         setVulnerabilities(vulnData);
         setTotal(data.data.pagination?.total || vulnData.length);
         generateStatistics(vulnData);
@@ -946,6 +954,26 @@ const VulnerabilitiesPage = () => {
     </Paper>
   );
 
+  const handleDeleteVulnerability = async () => {
+    if (!deleteDialog.vulnerability) return;
+    try {
+      const response = await fetch(`/api/vulnerabilities/${deleteDialog.vulnerability._id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete vulnerability');
+      }
+      setDeleteDialog({ open: false, vulnerability: null });
+      fetchVulnerabilities(); // reload danh sách
+    } catch (err) {
+      setError(err.message);
+      setDeleteDialog({ open: false, vulnerability: null });
+    }
+  };
+
   if (error && !vulnerabilities.length && !loading) {
     return (
       <Box sx={{ p: 3 }}>
@@ -1010,6 +1038,13 @@ const VulnerabilitiesPage = () => {
         <MenuItem onClick={() => handleViewCode(selectedVuln)}>
           <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
           <ListItemText>View Code</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => {
+          setDeleteDialog({ open: true, vulnerability: selectedVuln });
+          handleMenuClose();
+        }}>
+          <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Delete</ListItemText>
         </MenuItem>
       </Menu>
 
@@ -1247,15 +1282,14 @@ const VulnerabilitiesPage = () => {
               
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
-                  {/* FIX: Use Box container instead of Typography paragraph */}
                   <Box sx={{ mb: 2 }}>
-                    <Typography component="span" variant="body2">
+                    <Typography variant="body2">
                       <strong>Name:</strong> {codeDialog.vulnerability.name || codeDialog.vulnerability.title || 'Unknown'}
                     </Typography>
                   </Box>
                   
                   <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography component="span" variant="body2">
+                    <Typography variant="body2">
                       <strong>Severity:</strong>
                     </Typography>
                     <Chip 
@@ -1266,7 +1300,7 @@ const VulnerabilitiesPage = () => {
                   </Box>
                   
                   <Box sx={{ mb: 2 }}>
-                    <Typography component="span" variant="body2">
+                    <Typography variant="body2">
                       <strong>Tool:</strong> {codeDialog.vulnerability.tool || 'Unknown'}
                     </Typography>
                   </Box>
@@ -1274,14 +1308,14 @@ const VulnerabilitiesPage = () => {
                 
                 <Grid item xs={12} md={6}>
                   <Box sx={{ mb: 2 }}>
-                    <Typography component="span" variant="body2">
+                    <Typography variant="body2">
                       <strong>Type:</strong> {codeDialog.vulnerability.type || codeDialog.vulnerability.vulnerabilityType || 'Unknown'}
                     </Typography>
                   </Box>
                   
                   {codeDialog.vulnerability.cwe && (
                     <Box sx={{ mb: 2 }}>
-                      <Typography component="span" variant="body2">
+                      <Typography variant="body2">
                         <strong>CWE:</strong>{' '}
                         <a 
                           href={`https://cwe.mitre.org/data/definitions/${codeDialog.vulnerability.cwe.replace('CWE-', '')}.html`}
@@ -1298,7 +1332,7 @@ const VulnerabilitiesPage = () => {
               </Grid>
               
               <Box sx={{ mt: 2 }}>
-                <Typography component="div" variant="body2">
+                <Typography variant="body2">
                   <strong>Description:</strong> {
                     typeof codeDialog.vulnerability.description === 'string'
                       ? codeDialog.vulnerability.description
@@ -1309,7 +1343,7 @@ const VulnerabilitiesPage = () => {
               
               {codeDialog.vulnerability.remediation && (
                 <Box sx={{ mt: 2 }}>
-                  <Typography component="div" variant="body2">
+                  <Typography variant="body2">
                     <strong>Remediation:</strong> {
                       typeof codeDialog.vulnerability.remediation === 'string'
                         ? codeDialog.vulnerability.remediation
@@ -1319,32 +1353,152 @@ const VulnerabilitiesPage = () => {
                 </Box>
               )}
               
-              {Array.isArray(codeDialog.vulnerability.references) && codeDialog.vulnerability.references.map((ref, index) => {
-                if (typeof ref === 'string') {
-                  // ref là string (URL)
-                  return (
-                    <Typography key={index} variant="body2">
-                      • <a href={ref} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>{ref}</a>
+              {/* Comments Section */}
+              {codeDialog.vulnerability.comments && Array.isArray(codeDialog.vulnerability.comments) && codeDialog.vulnerability.comments.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    Comments:
+                  </Typography>
+                  {codeDialog.vulnerability.comments.map((comment, index) => {
+                    // Extract comment data
+                    let commentText = '';
+                    let commentDate = '';
+                    
+                    if (typeof comment === 'string') {
+                      commentText = comment;
+                    } else if (typeof comment === 'object' && comment !== null) {
+                      commentText = comment.text || comment.content || comment.message || JSON.stringify(comment);
+                      commentDate = comment.createdAt || comment.date || comment.timestamp;
+                    } else {
+                      commentText = JSON.stringify(comment);
+                    }
+                    
+                    // Format date
+                    let formattedDate = '';
+                    if (commentDate) {
+                      try {
+                        const date = new Date(commentDate);
+                        formattedDate = date.toLocaleString('vi-VN', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        });
+                      } catch (e) {
+                        formattedDate = commentDate;
+                      }
+                    }
+                    
+                    return (
+                      <Box key={index} sx={{ 
+                        mb: 1, 
+                        p: 2, 
+                        bgcolor: 'grey.50', 
+                        borderRadius: 1,
+                        border: '1px solid #e0e0e0'
+                      }}>
+                        <Typography variant="body2" sx={{ 
+                          fontSize: '0.9rem',
+                          lineHeight: 1.5,
+                          color: 'text.primary'
+                        }}>
+                          {commentText}
+                        </Typography>
+                        {formattedDate && (
+                          <Typography variant="caption" sx={{ 
+                            display: 'block',
+                            mt: 1,
+                            color: 'text.secondary',
+                            fontSize: '0.75rem',
+                            textAlign: 'right'
+                          }}>
+                            {formattedDate}
+                          </Typography>
+                        )}
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
+              
+              {/* Status Comments */}
+              {codeDialog.vulnerability.statusComment && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    Status Comment:
+                  </Typography>
+                  <Box sx={{ 
+                    p: 2, 
+                    bgcolor: 'grey.50', 
+                    borderRadius: 1,
+                    border: '1px solid #e0e0e0'
+                  }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.9rem',
+                      lineHeight: 1.5,
+                      color: 'text.primary'
+                    }}>
+                      {typeof codeDialog.vulnerability.statusComment === 'string' 
+                        ? codeDialog.vulnerability.statusComment 
+                        : (codeDialog.vulnerability.statusComment.text || JSON.stringify(codeDialog.vulnerability.statusComment))
+                      }
                     </Typography>
-                  );
-                } else if (typeof ref === 'object' && ref !== null && ref.url) {
-                  // ref là object có url
-                  return (
-                    <Typography key={index} variant="body2">
-                      • <a href={ref.url} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>
-                          {ref.title || ref.url}
-                        </a>
-                    </Typography>
-                  );
-                } else {
-                  // ref là object khác hoặc kiểu khác
-                  return (
-                    <Typography key={index} variant="body2">
-                      • {JSON.stringify(ref)}
-                    </Typography>
-                  );
-                }
-              })}
+                    {codeDialog.vulnerability.statusComment && typeof codeDialog.vulnerability.statusComment === 'object' && codeDialog.vulnerability.statusComment.createdAt && (
+                      <Typography variant="caption" sx={{ 
+                        display: 'block',
+                        mt: 1,
+                        color: 'text.secondary',
+                        fontSize: '0.75rem',
+                        textAlign: 'right'
+                      }}>
+                        📅 {new Date(codeDialog.vulnerability.statusComment.createdAt).toLocaleString('vi-VN', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              )}
+              
+              {/* References */}
+              {Array.isArray(codeDialog.vulnerability.references) && codeDialog.vulnerability.references.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    References:
+                  </Typography>
+                  {codeDialog.vulnerability.references.map((ref, index) => {
+                    if (typeof ref === 'string') {
+                      // ref là string (URL)
+                      return (
+                        <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
+                          • <a href={ref} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>{ref}</a>
+                        </Typography>
+                      );
+                    } else if (typeof ref === 'object' && ref !== null && ref.url) {
+                      // ref là object có url
+                      return (
+                        <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
+                          • <a href={ref.url} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>
+                              {ref.title || ref.url}
+                            </a>
+                        </Typography>
+                      );
+                    } else {
+                      // ref là object khác hoặc kiểu khác
+                      return (
+                        <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
+                          • {JSON.stringify(ref)}
+                        </Typography>
+                      );
+                    }
+                  })}
+                </Box>
+              )}
             </Paper>
           )}
         </DialogContent>
@@ -1371,6 +1525,25 @@ const VulnerabilitiesPage = () => {
             }}
           >
             Download
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, vulnerability: null })}>
+        <DialogTitle>Delete Vulnerability</DialogTitle>
+        <DialogContent>
+          <Typography>Bạn có chắc chắn muốn xóa vulnerability này không?</Typography>
+          <Typography variant="body2" sx={{ mt: 1, color: 'error.main' }}>
+            {deleteDialog.vulnerability?.name || deleteDialog.vulnerability?.title || 'Unnamed Issue'}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog({ open: false, vulnerability: null })}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteVulnerability} variant="contained" color="error">
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

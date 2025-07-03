@@ -101,59 +101,6 @@ const reportController = {
       });
     }
   },
-
-// /**
-//  * Report controller
-//  */
-// const reportController = {
-//   /**
-//    * Generate a new report
-//    * @param {Object} req - Express request object
-//    * @param {Object} res - Express response object
-//    */
-//   generateReport: async (req, res) => {
-//     try {
-//       const reportData = req.body;
-//       const userId = req.user.id;
-      
-//       const result = await reportService.generateReport(reportData, userId);
-      
-//       res.status(201).json({
-//         success: true,
-//         message: 'Report generated successfully',
-//         data: result
-//       });
-//     } catch (error) {
-//       logger.error(`Error in generateReport controller: ${error.message}`);
-      
-//       if (error.message.includes('not found')) {
-//         return res.status(404).json({
-//           success: false,
-//           message: error.message
-//         });
-//       }
-      
-//       if (error.message.includes('not completed')) {
-//         return res.status(400).json({
-//           success: false,
-//           message: error.message
-//         });
-//       }
-      
-//       if (error.message.includes('format')) {
-//         return res.status(400).json({
-//           success: false,
-//           message: error.message
-//         });
-//       }
-      
-//       res.status(500).json({
-//         success: false,
-//         message: 'Error generating report'
-//       });
-//     }
-//   },
-
   /**
    * Get report by ID
    * @param {Object} req - Express request object
@@ -419,9 +366,8 @@ const reportController = {
       });
     }
   },
-
   /**
- * Delete report - FIXED CONTROLLER
+ * Delete report and all vulnerabilities - UPDATED CONTROLLER
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -431,21 +377,34 @@ const reportController = {
       
       console.log(`🗑️ Attempting to delete report: ${reportId}`);
       
-      await reportService.deleteReport(reportId);
+      const deletionResult = await reportService.deleteReport(reportId);
       
+      // Return detailed response
       res.status(200).json({
         success: true,
-        message: 'Report deleted successfully'
+        message: deletionResult.message,
+        data: {
+          report: {
+            id: reportId,
+            name: deletionResult.data.reportName
+          },
+          summary: {
+            deletedVulnerabilities: deletionResult.data.deletedVulnerabilities,
+            deletedFiles: deletionResult.data.deletedFiles,
+            scanId: deletionResult.data.scanId
+          }
+        },
+        warnings: deletionResult.warnings
       });
       
     } catch (error) {
       console.error('❌ Delete report error:', {
         reportId: req.params.id,
-        message: error.message,    // ← Chỉ dùng .message
+        message: error.message,
         stack: error.stack
       });
       
-      logger.error(`Error deleting report: ${error.message}`); // ← Chỉ dùng .message
+      logger.error(`Error deleting report: ${error.message}`);
       
       if (error.message && error.message.includes('not found')) {
         return res.status(404).json({
@@ -456,37 +415,12 @@ const reportController = {
       
       res.status(500).json({
         success: false,
-        message: 'Error deleting report'
+        message: 'Error deleting report',
+        error: error.message
       });
     }
   }
 };
-//   deleteReport: async (req, res) => {
-//     try {
-//       const reportId = req.params.id;
-      
-//       await reportService.deleteReport(reportId);
-      
-//       res.status(200).json({
-//         success: true,
-//         message: 'Report deleted successfully'
-//       });
-//     } catch (error) {
-//       logger.error(`Error deleting report: ${error?.message || 'Unknown error'}`);
-      
-//       if (error?.message?.includes('not found')) {
-//         return res.status(404).json({
-//           success: false,
-//           message: 'Report not found'
-//         });
-//       }
-      
-//       res.status(500).json({
-//         success: false,
-//         message: 'Error deleting report'
-//       });
-//     }
-//   }
-// };
+
 
 module.exports = reportController;

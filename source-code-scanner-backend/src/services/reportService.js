@@ -504,38 +504,48 @@ async shareReport(reportId, expiryDays = 7) {
       throw error;
     }
   }
+// /**
+//  * Delete report - SIMPLE VERSION
+//  * @param {String} reportId - Report ID
+//  * @returns {Boolean} Success status
+//  */
+// async deleteReport(reportId) {
+//   try {
+//     console.log(`🔍 Finding report ${reportId}`);
+//     const report = await reportRepository.getReportById(reportId);
+    
+//     if (!report) {
+//       throw new Error(`Report not found: ${reportId}`);
+//     }
+    
+//     console.log(`✅ Found report: ${report.name}`);
+    
+//     // Delete file if exists
+//     if (report.filePath && fs.existsSync(report.filePath)) {
+//       console.log(`🗑️ Deleting file: ${report.filePath}`);
+//       await fs.unlink(report.filePath);
+//     }
+    
+//     // Delete from database
+//     console.log(`🗑️ Deleting from database`);
+//     await reportRepository.deleteReport(reportId);
+    
+//     console.log(`✅ Report deleted successfully`);
+//     logger.info(`Report deleted: ${reportId}`);
+    
+//     return true;
+    
+//   } catch (error) {
+//     console.error(`💥 Delete error:`, error.message); // ← Chỉ dùng .message
+//     // logger.error(`Error deleting report: ${error.message}`); // ← Chỉ dùng .message
+//     throw error;
+//   }
+// }
 
-  // async deleteReport(reportId) {
-  //   try {
-  //     const report = await reportRepository.getReportById(reportId);
-      
-  //     if (!report) {
-  //       throw new Error(`Report not found: ${reportId}`);
-  //     }
-      
-  //     if (report.filePath && fs.existsSync(report.filePath)) {
-  //       await fs.unlink(report.filePath);
-  //     }
-      
-  //     await reportRepository.deleteReport(reportId);
-      
-  //     logger.info(`Report deleted: ${reportId}`);
-      
-  //     return true;
-  //   } catch (error) {
-  //     logger.error(`Error deleting report: ${error?.message || 'Unknown error'}`);
-  //     throw error;
-  //   }
-  // }
-  /**
- * Delete report - FIXED LOGIC
- * @param {String} reportId - Report ID
- * @returns {Boolean} Success status
- */
 /**
- * Delete report - SIMPLE VERSION
+ * Delete report and all vulnerabilities of the scan
  * @param {String} reportId - Report ID
- * @returns {Boolean} Success status
+ * @returns {Object} Deletion summary
  */
 async deleteReport(reportId) {
   try {
@@ -546,77 +556,86 @@ async deleteReport(reportId) {
       throw new Error(`Report not found: ${reportId}`);
     }
     
-    console.log(`✅ Found report: ${report.name}`);
+    console.log(`✅ Found report: ${report.name} for scan: ${report.scan}`);
     
-    // Delete file if exists
-    if (report.filePath && fs.existsSync(report.filePath)) {
-      console.log(`🗑️ Deleting file: ${report.filePath}`);
-      await fs.unlink(report.filePath);
+    const deletionSummary = {
+      reportId,
+      reportName: report.name,
+      scanId: report.scan,
+      deletedVulnerabilities: 0,
+      deletedFiles: 0,
+      errors: []
+    };
+    
+    // ===== DELETE ALL VULNERABILITIES FOR THIS SCAN =====
+    try {
+      console.log(`🗑️ Deleting ALL vulnerabilities for scan: ${report.scan}`);
+      const vulnDeleteResult = await vulnerabilityRepository.deleteVulnerabilitiesByScan(report.scan);
+      deletionSummary.deletedVulnerabilities = vulnDeleteResult.deletedCount || 0;
+      console.log(`✅ Deleted ${deletionSummary.deletedVulnerabilities} vulnerabilities`);
+    } catch (vulnError) {
+      console.error(`❌ Error deleting vulnerabilities: ${vulnError.message}`);
+      deletionSummary.errors.push(`Vulnerabilities: ${vulnError.message}`);
+      // Continue with report deletion even if vulnerability deletion fails
     }
     
-    // Delete from database
-    console.log(`🗑️ Deleting from database`);
-    await reportRepository.deleteReport(reportId);
+    // ===== DELETE REPORT FILE =====
+    try {
+      if (report.filePath && fs.existsSync(report.filePath)) {
+        console.log(`🗑️ Deleting report file: ${report.filePath}`);
+        await fs.unlink(report.filePath);
+        deletionSummary.deletedFiles = 1;
+        console.log(`✅ Report file deleted`);
+      } else {
+        console.log(`ℹ️ No report file to delete`);
+      }
+    } catch (fileError) {
+      console.error(`❌ Error deleting report file: ${fileError.message}`);
+      deletionSummary.errors.push(`Report file: ${fileError.message}`);
+    }
     
-    console.log(`✅ Report deleted successfully`);
-    logger.info(`Report deleted: ${reportId}`);
+    // ===== DELETE REPORT RECORD =====
+    try {
+      console.log(`🗑️ Deleting report record from database`);
+      const deletedReport = await reportRepository.deleteReport(reportId);
+      
+      if (!deletedReport) {
+        throw new Error('Failed to delete report from database');
+      }
+      
+      console.log(`✅ Report record deleted successfully`);
+    } catch (dbError) {
+      console.error(`❌ Error deleting report record: ${dbError.message}`);
+      deletionSummary.errors.push(`Report record: ${dbError.message}`);
+      throw dbError; // This is critical, so throw
+    }
     
-    return true;
+    // ===== LOG COMPLETION =====
+    const hasErrors = deletionSummary.errors.length > 0;
+    logger.info(`Report deleted with vulnerabilities: ${reportId}`, deletionSummary);
+    
+    console.log(`✅ Report deletion completed:`, deletionSummary);
+    
+    return {
+      success: true,
+      message: hasErrors 
+        ? 'Report deleted with some warnings' 
+        : 'Report and all related vulnerabilities deleted successfully',
+      data: deletionSummary,
+      warnings: hasErrors ? deletionSummary.errors : undefined
+    };
     
   } catch (error) {
-    console.error(`💥 Delete error:`, error.message); // ← Chỉ dùng .message
-    // logger.error(`Error deleting report: ${error.message}`); // ← Chỉ dùng .message
+    console.error(`💥 Error in deleteReport service:`, {
+      reportId,
+      error: error.message,
+      stack: error.stack
+    });
+    
+    logger.error(`Error deleting report: ${error.message}`);
     throw error;
   }
 }
-// async deleteReport(reportId) {
-//   try {
-//     console.log(`🔍 Step 1: Finding report ${reportId}`);
-//     const report = await reportRepository.getReportById(reportId);
-    
-//     if (!report) {
-//       console.error(`❌ Report not found: ${reportId}`);
-//       throw new Error(`Report not found: ${reportId}`);
-//     }
-    
-//     console.log(`✅ Found report: ${report.name}`);
-    
-//     // Delete file if exists
-//     if (report.filePath && fs.existsSync(report.filePath)) {
-//       console.log(`🗑️ Step 2: Deleting file: ${report.filePath}`);
-//       await fs.unlink(report.filePath);
-//       console.log(`✅ File deleted successfully`);
-//     } else {
-//       console.log(`ℹ️ No file to delete or file doesn't exist`);
-//     }
-    
-//     // Delete from database
-//     console.log(`🗑️ Step 3: Deleting from database`);
-//     const deletedReport = await reportRepository.deleteReport(reportId);
-    
-//     // FIXED: Check if deletion was successful
-//     if (!deletedReport) {
-//       console.error(`❌ Failed to delete report from database`);
-//       throw new Error('Failed to delete report from database');
-//     }
-    
-//     console.log(`✅ Report deleted successfully from database`);
-//     logger.info(`Report deleted: ${reportId}`);
-    
-//     return true; // Always return true if we reach here
-    
-//   } catch (error) {
-//     console.error(`💥 Error in deleteReport service:`, {
-//       reportId,
-//       error: error.message,
-//       stack: error.stack
-//     });
-    
-//     logger.error(`Error deleting report: ${error?.message || 'Unknown error'}`);
-//     throw error; // Re-throw to let controller handle
-//   }
-// }
-
   getSeverityColor(severity) {
     switch (severity.toLowerCase()) {
       case 'critical':
