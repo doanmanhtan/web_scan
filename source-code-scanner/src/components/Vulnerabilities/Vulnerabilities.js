@@ -515,11 +515,28 @@ const VulnerabilitiesPage = () => {
   const typeChartData = statistics ? 
     Object.entries(statistics.typeCounts || {}).map(([name, value]) => ({ name, value })) : [];
 
+  const renderPieTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const { value, name, color } = payload[0];
+      // Tính tổng value của pieChartData
+      const total = pieChartData.reduce((sum, item) => sum + item.value, 0);
+      const percent = total > 0 ? ((value / total) * 100).toFixed(0) : '0';
+      return (
+        <Box sx={{ bgcolor: 'background.paper', p: 1, border: 1, borderColor: 'divider', borderRadius: 1, boxShadow: 1 }}>
+          <Typography variant="body2" sx={{ color, fontWeight: 'bold' }}>
+            {name}: {value} ({percent}%)
+          </Typography>
+        </Box>
+      );
+    }
+    return null;
+  };
+
   const renderOverviewTab = () => (
     <Grid container spacing={3}>
       <Grid item xs={12}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Vulnerabilities Summary</Typography>
+          {/* <Typography variant="h6">Vulnerabilities Summary</Typography> */}
           <Box>
             <Button startIcon={<RefreshIcon />} onClick={fetchVulnerabilities} sx={{ mr: 1 }}>
               Refresh
@@ -556,13 +573,13 @@ const VulnerabilitiesPage = () => {
       </Grid>
       
       {pieChartData.length > 0 && (
-        <Grid item xs={12} md={6}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ minWidth: 280, width: '100%', maxWidth: 350, height: 420, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+            <CardContent sx={{ width: '100%', height: '100%', px: 1, py: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <Typography variant="subtitle1" gutterBottom>
                 Vulnerabilities by Severity
               </Typography>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={350}>
                 <PieChart>
                   <Pie
                     data={pieChartData}
@@ -571,13 +588,14 @@ const VulnerabilitiesPage = () => {
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    label={false}
+                    labelLine={false}
                   >
                     {pieChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [value, 'Issues']} />
+                  <Tooltip content={renderPieTooltip} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -587,13 +605,13 @@ const VulnerabilitiesPage = () => {
       )}
       
       {typeChartData.length > 0 && (
-        <Grid item xs={12} md={6}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
+        <Grid item xs={12} md={7}>
+          <Card sx={{ minWidth: 350, width: '100%', maxWidth: 600, height: 420, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+            <CardContent sx={{ width: '100%', height: '100%', p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <Typography variant="subtitle1" gutterBottom>
                 Issues by Type
               </Typography>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={350}>
                 <BarChart data={typeChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
