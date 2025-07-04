@@ -294,14 +294,14 @@ const ReportsPage = () => {
               <Grid item xs={12} md={6}>
                 <Typography variant="h6">Issue Breakdown:</Typography>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                  {report.criticalIssues > 0 && <Chip label={`Critical: ${report.criticalIssues}`} color="error" onClick={() => handleIssueClick('critical')} />}
-                  {report.highIssues > 0 && <Chip label={`High: ${report.highIssues}`} color="warning" onClick={() => handleIssueClick('high')} />}
-                  {report.mediumIssues > 0 && <Chip label={`Medium: ${report.mediumIssues}`} color="info" onClick={() => handleIssueClick('medium')} />}
-                  {report.lowIssues > 0 && <Chip label={`Low: ${report.lowIssues}`} color="success" onClick={() => handleIssueClick('low')} />}
+                  {report.criticalIssues > 0 && <Chip label={`Critical: ${report.criticalIssues}`} color="error" style={{ pointerEvents: 'none' }} />}
+                  {report.highIssues > 0 && <Chip label={`High: ${report.highIssues}`} color="warning" style={{ pointerEvents: 'none' }} />}
+                  {report.mediumIssues > 0 && <Chip label={`Medium: ${report.mediumIssues}`} color="info" style={{ pointerEvents: 'none' }} />}
+                  {report.lowIssues > 0 && <Chip label={`Low: ${report.lowIssues}`} color="success" style={{ pointerEvents: 'none' }} />}
                 </Box>
                 <Typography variant="h6" sx={{ mt: 2 }}>Scanned Tools:</Typography>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                  {report.tools.map(tool => <Chip key={tool} label={tool} variant="outlined" />)}
+                  {report.tools.map(tool => <Chip key={tool} label={tool} variant="outlined" style={{ pointerEvents: 'none' }} />)}
                 </Box>
                 <Typography variant="h6" sx={{ mt: 2 }}>Uploaded Files:</Typography>
                 <List>
@@ -417,6 +417,7 @@ const ReportsPage = () => {
                         label={report.status.charAt(0).toUpperCase() + report.status.slice(1)} 
                         color={report.status === 'completed' ? 'success' : 'default'}
                         size="small"
+                        style={{ pointerEvents: 'none' }}
                       />
                     </TableCell>
                     <TableCell align="center">
@@ -429,6 +430,7 @@ const ReportsPage = () => {
                           'success'
                         }
                         size="small"
+                        style={{ pointerEvents: 'none' }}
                       />
                     </TableCell>
                     <TableCell align="right">

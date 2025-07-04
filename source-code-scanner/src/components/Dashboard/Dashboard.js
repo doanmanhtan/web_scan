@@ -32,8 +32,9 @@ import {
   Info as InfoIcon,
   Folder as FolderIcon,
   TrendingUp as TrendingUpIcon,
+  BarChart as BarChartIcon,
 } from '@mui/icons-material';
-import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -190,21 +191,42 @@ const Dashboard = () => {
     { name: 'Low', value: summary.issueStats.low, color: COLORS.low },
   ].filter(item => item.value > 0) : [];
 
+  // Pie chart custom label dưới chart
+  const renderPieChartLabels = () => {
+    if (!pieChartData.length) return null;
+    const total = summary?.issueStats?.total || 0;
+    return (
+      <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+        {pieChartData.map((item) => {
+          const percent = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0.0';
+          return (
+            <Typography key={item.name} variant="body2" sx={{ color: item.color, fontWeight: 'bold' }}>
+              {item.name}: {item.value} issues ({percent}%)
+            </Typography>
+          );
+        })}
+      </Box>
+    );
+  };
+
   // Custom tooltip cho pie chart
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const data = payload[0];
+      // Tính tổng issues để lấy %
+      const total = summary?.issueStats?.total || 0;
+      const percent = total > 0 ? ((data.value / total) * 100).toFixed(1) : '0.0';
       return (
-        <Box sx={{ 
-          bgcolor: 'background.paper', 
-          p: 1, 
-          border: 1, 
+        <Box sx={{
+          bgcolor: 'background.paper',
+          p: 1,
+          border: 1,
           borderColor: 'divider',
           borderRadius: 1,
           boxShadow: 1
         }}>
           <Typography variant="body2" sx={{ color: data.payload.color, fontWeight: 'bold' }}>
-            {data.name}: {data.value} issues
+            {data.name}: {data.value} issues ({percent}%)
           </Typography>
         </Box>
       );
@@ -250,163 +272,87 @@ const Dashboard = () => {
   );
 
   return (
-    <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
-      {/* Header */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        mb: 4,
-        p: 3,
-        bgcolor: 'background.paper',
-        borderRadius: 2,
-        boxShadow: 1
-      }}>
-        <Box>
-          <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-            Dashboard
-          </Typography>
-          {/* <Typography variant="subtitle1" color="text.secondary">
-            Monitor your application security in real-time
-          </Typography> */}
+    <Box sx={{ p: 3, bgcolor: '#fff', minHeight: '100vh' }}>
+      <Box sx={{ width: '100%', maxWidth: '100%', p: 0, m: 0 }}>
+        {/* Header */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 2,
+          mt: 0,
+          p: 2,
+          bgcolor: '#fff',
+          borderRadius: 0,
+        }}>
         </Box>
-        <Button
-          variant="contained"
-          color="primary"
-          size="large"
-          startIcon={<AddIcon />}
-          onClick={handleStartNewScan}
-          sx={{ 
-            px: 3, 
-            py: 1.5,
-            borderRadius: 2,
-            boxShadow: 2,
-            '&:hover': { boxShadow: 4 }
-          }}
-        >
-          Start New Scan
-        </Button>
-      </Box>
 
-      <Grid container spacing={3}>
-        {/* Statistics Cards */}
-        <Grid item xs={12}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Paper sx={{ 
-                p: 3, 
-                textAlign: 'center',
-                borderRadius: 2,
-                boxShadow: 2,
-                background: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
-                border: `2px solid ${COLORS.critical}20`
-              }}>
-                <Avatar sx={{ bgcolor: COLORS.critical, mx: 'auto', mb: 2, width: 48, height: 48 }}>
-                  <ErrorIcon />
-                </Avatar>
-                <Typography variant="h4" sx={{ color: COLORS.critical, fontWeight: 'bold', mb: 1 }}>
-                  {summary.issueStats.critical}
-                </Typography>
-                <Typography variant="h6" sx={{ color: COLORS.critical }}>
-                  Critical Issues
-                </Typography>
-              </Paper>
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Paper sx={{ 
-                p: 3, 
-                textAlign: 'center',
-                borderRadius: 2,
-                boxShadow: 2,
-                background: 'linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%)',
-                border: `2px solid ${COLORS.high}20`
-              }}>
-                <Avatar sx={{ bgcolor: COLORS.high, mx: 'auto', mb: 2, width: 48, height: 48 }}>
-                  <WarningIcon />
-                </Avatar>
-                <Typography variant="h4" sx={{ color: COLORS.high, fontWeight: 'bold', mb: 1 }}>
-                  {summary.issueStats.high}
-                </Typography>
-                <Typography variant="h6" sx={{ color: COLORS.high }}>
-                  High Issues
-                </Typography>
-              </Paper>
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Paper sx={{ 
-                p: 3, 
-                textAlign: 'center',
-                borderRadius: 2,
-                boxShadow: 2,
-                background: 'linear-gradient(135deg, #e3f2fd 0%, #90caf9 100%)',
-                border: `2px solid ${COLORS.medium}20`
-              }}>
-                <Avatar sx={{ bgcolor: COLORS.medium, mx: 'auto', mb: 2, width: 48, height: 48 }}>
-                  <InfoIcon />
-                </Avatar>
-                <Typography variant="h4" sx={{ color: COLORS.medium, fontWeight: 'bold', mb: 1 }}>
-                  {summary.issueStats.medium}
-                </Typography>
-                <Typography variant="h6" sx={{ color: COLORS.medium }}>
-                  Medium Issues
-                </Typography>
-              </Paper>
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Paper sx={{ 
-                p: 3, 
-                textAlign: 'center',
-                borderRadius: 2,
-                boxShadow: 2,
-                background: 'linear-gradient(135deg, #e8f5e8 0%, #a5d6a7 100%)',
-                border: `2px solid ${COLORS.low}20`
-              }}>
-                <Avatar sx={{ bgcolor: COLORS.low, mx: 'auto', mb: 2, width: 48, height: 48 }}>
-                  <InfoIcon />
-                </Avatar>
-                <Typography variant="h4" sx={{ color: COLORS.low, fontWeight: 'bold', mb: 1 }}>
-                  {summary.issueStats.low}
-                </Typography>
-                <Typography variant="h6" sx={{ color: COLORS.low }}>
-                  Low Issues
-                </Typography>
-              </Paper>
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Paper sx={{ 
-                p: 3, 
-                textAlign: 'center',
-                borderRadius: 2,
-                boxShadow: 2,
-                background: 'linear-gradient(135deg, #f3e5f5 0%, #ce93d8 100%)',
-                border: '2px solid #9c27b020'
-              }}>
-                <Avatar sx={{ bgcolor: '#9c27b0', mx: 'auto', mb: 2, width: 48, height: 48 }}>
-                  <BugIcon />
-                </Avatar>
-                <Typography variant="h4" sx={{ color: '#9c27b0', fontWeight: 'bold', mb: 1 }}>
-                  {summary.issueStats.total}
-                </Typography>
-                <Typography variant="h6" sx={{ color: '#9c27b0' }}>
-                  Total Issues
-                </Typography>
-              </Paper>
-            </Grid>
-          </Grid>
-        </Grid>
+        {/* Stats Cards Row - dùng flex cho đều và căn giữa */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 3, mb: 6, flexWrap: 'wrap' }}>
+          {[{
+            label: 'Critical Issues',
+            value: summary.issueStats.critical,
+            color: COLORS.critical,
+            icon: <ErrorIcon />,
+          }, {
+            label: 'High Issues',
+            value: summary.issueStats.high,
+            color: COLORS.high,
+            icon: <WarningIcon />,
+          }, {
+            label: 'Medium Issues',
+            value: summary.issueStats.medium,
+            color: COLORS.medium,
+            icon: <InfoIcon />,
+          }, {
+            label: 'Low Issues',
+            value: summary.issueStats.low,
+            color: COLORS.low,
+            icon: <InfoIcon />,
+          }, {
+            label: 'Total Issues',
+            value: summary.issueStats.total,
+            color: '#9c27b0',
+            icon: <BugIcon />,
+          }].map((stat, idx) => (
+            <Paper key={stat.label} sx={{
+              flex: '1 1 0',
+              minWidth: 180,
+              maxWidth: 220,
+              p: 3,
+              textAlign: 'center',
+              borderRadius: 2,
+              border: '1px solid #e0e0e0',
+              boxShadow: 0,
+              bgcolor: '#fff',
+              minHeight: 150,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mx: 'auto',
+            }}>
+              <Avatar sx={{ bgcolor: stat.color, mb: 1, width: 48, height: 48 }}>
+                {stat.icon}
+              </Avatar>
+              <Typography variant="h3" sx={{ color: stat.color, fontWeight: 'bold', mb: 0.5 }}>
+                {stat.value}
+              </Typography>
+              <Typography variant="subtitle1" sx={{ color: '#222', mb: 0.5 }}>
+                {stat.label}
+              </Typography>
+            </Paper>
+          ))}
+        </Box>
 
-        {/* Charts Section */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, borderRadius: 2, boxShadow: 2, height: '400px' }}>
+        {/* Charts Row */}
+        <Box sx={{ display: 'flex', gap: 3, mb: 6 }}>
+          <Paper sx={{ flex: 1, minWidth: 0, p: 3, borderRadius: 2, border: '1px solid #e0e0e0', boxShadow: 0, height: 400 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
                 <TrendingUpIcon />
               </Avatar>
-              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                 Issues Distribution
               </Typography>
             </Box>
@@ -417,10 +363,10 @@ const Dashboard = () => {
                     data={pieChartData}
                     cx="50%"
                     cy="50%"
-                    outerRadius={100}
+                    outerRadius={130}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                    label={false}
                     labelLine={false}
                     stroke="#fff"
                     strokeWidth={3}
@@ -430,20 +376,11 @@ const Dashboard = () => {
                     ))}
                   </Pie>
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend 
-                    wrapperStyle={{ paddingTop: '20px' }}
-                    iconType="circle"
-                  />
+                  <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
+                  {renderPieChartLabels()}
                 </PieChart>
               ) : (
-                <Box sx={{ 
-                  height: 320, 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  color: 'text.secondary'
-                }}>
+                <Box sx={{ height: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
                   <BugIcon sx={{ fontSize: 60, mb: 2, opacity: 0.5 }} />
                   <Typography variant="h6">No security issues found</Typography>
                   <Typography variant="body2">Your applications are secure!</Typography>
@@ -451,16 +388,36 @@ const Dashboard = () => {
               )}
             </ResponsiveContainer>
           </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, borderRadius: 2, boxShadow: 2, height: '400px' }}>
+          <Paper sx={{ flex: 1, minWidth: 0, p: 3, borderRadius: 2, border: '1px solid #e0e0e0', boxShadow: 0, height: 400 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Avatar sx={{ bgcolor: 'secondary.main', mr: 2 }}>
+              <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
+                <BarChartIcon />
+              </Avatar>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                Issues by Severity (Bar)
+              </Typography>
+            </Box>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={issuesOverTime}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="date" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="critical" fill={COLORS.critical} name="Critical" />
+                <Bar dataKey="high" fill={COLORS.high} name="High" />
+                <Bar dataKey="medium" fill={COLORS.medium} name="Medium" />
+                <Bar dataKey="low" fill={COLORS.low} name="Low" />
+              </BarChart>
+            </ResponsiveContainer>
+          </Paper>
+          <Paper sx={{ flex: 1, minWidth: 0, p: 3, borderRadius: 2, border: '1px solid #e0e0e0', boxShadow: 0, height: 400 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Avatar sx={{ bgcolor: 'info.main', mr: 2 }}>
                 <HistoryIcon />
               </Avatar>
-              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                Issues Trends
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                Issues Trends (Line)
               </Typography>
             </Box>
             <ResponsiveContainer width="100%" height={320}>
@@ -469,57 +426,15 @@ const Dashboard = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                   <XAxis dataKey="date" stroke="#666" />
                   <YAxis stroke="#666" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'white', 
-                      border: '1px solid #ccc',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                    }} 
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #ccc', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
                   <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="critical" 
-                    stroke={COLORS.critical} 
-                    name="Critical" 
-                    strokeWidth={3}
-                    dot={{ fill: COLORS.critical, strokeWidth: 2, r: 4 }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="high" 
-                    stroke={COLORS.high} 
-                    name="High" 
-                    strokeWidth={3}
-                    dot={{ fill: COLORS.high, strokeWidth: 2, r: 4 }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="medium" 
-                    stroke={COLORS.medium} 
-                    name="Medium" 
-                    strokeWidth={3}
-                    dot={{ fill: COLORS.medium, strokeWidth: 2, r: 4 }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="low" 
-                    stroke={COLORS.low} 
-                    name="Low" 
-                    strokeWidth={3}
-                    dot={{ fill: COLORS.low, strokeWidth: 2, r: 4 }}
-                  />
+                  <Line type="monotone" dataKey="critical" stroke={COLORS.critical} name="Critical" strokeWidth={3} dot={{ fill: COLORS.critical, strokeWidth: 2, r: 4 }} />
+                  <Line type="monotone" dataKey="high" stroke={COLORS.high} name="High" strokeWidth={3} dot={{ fill: COLORS.high, strokeWidth: 2, r: 4 }} />
+                  <Line type="monotone" dataKey="medium" stroke={COLORS.medium} name="Medium" strokeWidth={3} dot={{ fill: COLORS.medium, strokeWidth: 2, r: 4 }} />
+                  <Line type="monotone" dataKey="low" stroke={COLORS.low} name="Low" strokeWidth={3} dot={{ fill: COLORS.low, strokeWidth: 2, r: 4 }} />
                 </LineChart>
               ) : (
-                <Box sx={{ 
-                  height: 320, 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  color: 'text.secondary'
-                }}>
+                <Box sx={{ height: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
                   <HistoryIcon sx={{ fontSize: 60, mb: 2, opacity: 0.5 }} />
                   <Typography variant="h6">No trend data available</Typography>
                   <Typography variant="body2">Run more scans to see trends</Typography>
@@ -527,17 +442,18 @@ const Dashboard = () => {
               )}
             </ResponsiveContainer>
           </Paper>
-        </Grid>
+        </Box>
 
-        {/* Recent Scans */}
-        <Grid item xs={12} md={6}>
-          <Card sx={{ borderRadius: 2, boxShadow: 2, height: '500px' }}>
+        {/* Tables Row */}
+        <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
+          {/* Recent Scans/Activities */}
+          <Card sx={{ flex: 1, minWidth: 0, borderRadius: 2, border: '1px solid #e0e0e0', boxShadow: 0, height: 500 }}>
             <CardContent sx={{ pb: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Avatar sx={{ bgcolor: 'info.main', mr: 2 }}>
                   <SecurityIcon />
                 </Avatar>
-                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                   Recent Scans
                 </Typography>
               </Box>
@@ -545,21 +461,9 @@ const Dashboard = () => {
                 {recentScans.map((scan, index) => (
                   <React.Fragment key={scan.id}>
                     <ListItem
-                      sx={{ 
-                        borderRadius: 1, 
-                        mb: 1,
-                        '&:hover': { bgcolor: 'action.hover' }
-                      }}
+                      sx={{ borderRadius: 1, mb: 1, '&:hover': { bgcolor: 'action.hover' } }}
                       secondaryAction={
-                        <IconButton 
-                          edge="end" 
-                          onClick={() => navigate(`/reports/${scan.id}`)}
-                          sx={{ 
-                            bgcolor: 'primary.main', 
-                            color: 'white',
-                            '&:hover': { bgcolor: 'primary.dark' }
-                          }}
-                        >
+                        <IconButton edge="end" onClick={() => navigate(`/reports/${scan.id}`)} sx={{ bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }}>
                           <ArrowForwardIcon />
                         </IconButton>
                       }
@@ -570,47 +474,24 @@ const Dashboard = () => {
                         </Avatar>
                       </ListItemIcon>
                       <ListItemText
-                        primary={
-                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                            {scan.name}
-                          </Typography>
-                        }
-                        secondary={
-                          <Typography variant="body2" color="text.secondary">
-                            {scan.date} • {scan.status}
-                          </Typography>
-                        }
+                        primary={<Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{scan.name}</Typography>}
+                        secondary={<Typography variant="body2" color="text.secondary">{scan.date} • {scan.status}</Typography>}
                       />
                       <Box sx={{ display: 'flex', gap: 0.5, mr: 2, flexWrap: 'wrap' }}>
                         {scan.criticalIssues > 0 && (
-                          <Chip 
-                            size="small" 
-                            label={scan.criticalIssues} 
-                            sx={{ bgcolor: COLORS.critical, color: 'white', fontWeight: 'bold' }} 
-                          />
+                          <Chip size="small" label={scan.criticalIssues} sx={{ bgcolor: COLORS.critical, color: 'white', fontWeight: 'bold' }} />
                         )}
                         {scan.highIssues > 0 && (
-                          <Chip 
-                            size="small" 
-                            label={scan.highIssues} 
-                            sx={{ bgcolor: COLORS.high, color: 'white', fontWeight: 'bold' }} 
-                          />
+                          <Chip size="small" label={scan.highIssues} sx={{ bgcolor: COLORS.high, color: 'white', fontWeight: 'bold' }} />
                         )}
                         {scan.mediumIssues > 0 && (
-                          <Chip 
-                            size="small" 
-                            label={scan.mediumIssues} 
-                            sx={{ bgcolor: COLORS.medium, color: 'white', fontWeight: 'bold' }} 
-                          />
+                          <Chip size="small" label={scan.mediumIssues} sx={{ bgcolor: COLORS.medium, color: 'white', fontWeight: 'bold' }} />
                         )}
                         {scan.lowIssues > 0 && (
-                          <Chip 
-                            size="small" 
-                            label={scan.lowIssues} 
-                            sx={{ bgcolor: COLORS.low, color: 'white', fontWeight: 'bold' }} 
-                          />
+                          <Chip size="small" label={scan.lowIssues} sx={{ bgcolor: COLORS.low, color: 'white', fontWeight: 'bold' }} />
                         )}
                       </Box>
+                      <Chip label={scan.status} size="small" sx={{ ml: 1, bgcolor: scan.status === 'completed' ? 'success.main' : scan.status === 'running' ? 'warning.main' : 'error.main', color: 'white', fontWeight: 'bold' }} />
                     </ListItem>
                     {index < recentScans.length - 1 && <Divider />}
                   </React.Fragment>
@@ -618,27 +499,19 @@ const Dashboard = () => {
               </List>
             </CardContent>
             <CardActions sx={{ justifyContent: 'center', pt: 0 }}>
-              <Button 
-                variant="outlined"
-                endIcon={<ArrowForwardIcon />} 
-                onClick={handleViewAllScans}
-                sx={{ borderRadius: 2 }}
-              >
+              <Button variant="outlined" endIcon={<ArrowForwardIcon />} onClick={handleViewAllScans} sx={{ borderRadius: 2 }}>
                 View All Scans
               </Button>
             </CardActions>
           </Card>
-        </Grid>
-
-        {/* Recent Projects */}
-        <Grid item xs={12} md={6}>
-          <Card sx={{ borderRadius: 2, boxShadow: 2, height: '500px' }}>
+          {/* Recent Projects/Tasks */}
+          <Card sx={{ flex: 1, minWidth: 0, borderRadius: 2, border: '1px solid #e0e0e0', boxShadow: 0, height: 500 }}>
             <CardContent sx={{ pb: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
                   <FolderIcon />
                 </Avatar>
-                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                   Recent Projects
                 </Typography>
               </Box>
@@ -646,21 +519,9 @@ const Dashboard = () => {
                 {recentProjects.map((project, index) => (
                   <React.Fragment key={project.id}>
                     <ListItem
-                      sx={{ 
-                        borderRadius: 1, 
-                        mb: 1,
-                        '&:hover': { bgcolor: 'action.hover' }
-                      }}
+                      sx={{ borderRadius: 1, mb: 1, '&:hover': { bgcolor: 'action.hover' } }}
                       secondaryAction={
-                        <IconButton 
-                          edge="end" 
-                          onClick={() => navigate(`/reports/${project.id}`)}
-                          sx={{ 
-                            bgcolor: 'primary.main', 
-                            color: 'white',
-                            '&:hover': { bgcolor: 'primary.dark' }
-                          }}
-                        >
+                        <IconButton edge="end" onClick={() => navigate(`/reports/${project.id}`)} sx={{ bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }}>
                           <ArrowForwardIcon />
                         </IconButton>
                       }
@@ -671,23 +532,10 @@ const Dashboard = () => {
                         </Avatar>
                       </ListItemIcon>
                       <ListItemText
-                        primary={
-                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                            {project.name}
-                          </Typography>
-                        }
-                        secondary={
-                          <Typography variant="body2" color="text.secondary">
-                            Last scan: {project.lastScan}
-                          </Typography>
-                        }
+                        primary={<Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{project.name}</Typography>}
+                        secondary={<Typography variant="body2" color="text.secondary">Last scan: {project.lastScan}</Typography>}
                       />
-                      <Chip 
-                        size="medium" 
-                        label={`${project.issuesCount} issues`} 
-                        color={project.issuesCount > 10 ? 'error' : project.issuesCount > 5 ? 'warning' : 'success'}
-                        sx={{ fontWeight: 'bold' }}
-                      />
+                      <Chip size="medium" label={`${project.issuesCount} issues`} color={project.issuesCount > 10 ? 'error' : project.issuesCount > 5 ? 'warning' : 'success'} sx={{ fontWeight: 'bold' }} />
                     </ListItem>
                     {index < recentProjects.length - 1 && <Divider />}
                   </React.Fragment>
@@ -695,18 +543,13 @@ const Dashboard = () => {
               </List>
             </CardContent>
             <CardActions sx={{ justifyContent: 'center', pt: 0 }}>
-              <Button 
-                variant="outlined"
-                endIcon={<ArrowForwardIcon />} 
-                onClick={handleViewAllProjects}
-                sx={{ borderRadius: 2 }}
-              >
+              <Button variant="outlined" endIcon={<ArrowForwardIcon />} onClick={handleViewAllProjects} sx={{ borderRadius: 2 }}>
                 View All Projects
               </Button>
             </CardActions>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   );
 };

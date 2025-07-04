@@ -746,6 +746,7 @@ const VulnerabilitiesPage = () => {
                         label={vuln.severity?.toUpperCase() || 'UNKNOWN'}
                         color={getSeverityColor(vuln.severity)}
                         size="small"
+                        style={{ pointerEvents: 'none' }}
                       />
                     </TableCell>
                     <TableCell>
@@ -776,6 +777,7 @@ const VulnerabilitiesPage = () => {
                       <Chip
                         label={vuln.tool || 'Unknown tool'}
                         size="small"
+                        style={{ pointerEvents: 'none' }}
                       />
                     </TableCell>
                     <TableCell>
@@ -783,6 +785,7 @@ const VulnerabilitiesPage = () => {
                         label={vuln.status?.replace('_', ' ').toUpperCase() || 'UNKNOWN'}
                         color={getStatusColor(vuln.status)}
                         size="small"
+                        style={{ pointerEvents: 'none' }}
                       />
                     </TableCell>
                     <TableCell>
