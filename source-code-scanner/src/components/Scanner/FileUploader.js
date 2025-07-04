@@ -221,30 +221,6 @@ const FileUploader = ({ onFileUpload }) => {
             </Button>
           </Box>
         </Grid>
-        
-        <Grid item xs={12}>
-          <Divider sx={{ my: 2 }} />
-          <Typography variant="subtitle1" gutterBottom>
-            Enter directory path manually
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <TextField
-              fullWidth
-              placeholder="Enter a directory path, e.g., /path/to/source"
-              value={manualPath}
-              onChange={(e) => setManualPath(e.target.value)}
-              variant="outlined"
-              size="small"
-            />
-            <Button
-              variant="contained"
-              onClick={handleManualPathSubmit}
-              disabled={!manualPath.trim()}
-            >
-              Add
-            </Button>
-          </Box>
-        </Grid>
       </Grid>
     </Box>
   );

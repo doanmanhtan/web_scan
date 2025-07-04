@@ -468,12 +468,27 @@ const ScanResults = ({ results, issuesFound, currentFile, scanId }) => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        size="small" 
-                        label={vuln.tool || 'Unknown'} 
-                        variant="outlined" 
-                        color="primary"
-                      />
+                      <Box>
+                        <Chip 
+                          size="small" 
+                          label={vuln.tool || 'Unknown'} 
+                          variant="outlined" 
+                          color="primary"
+                        />
+                        {vuln.metadata?.detectedBy && new Set(vuln.metadata.detectedBy).size > 1 && (
+                          <Chip 
+                            size="small" 
+                            label={`${[...new Set(vuln.metadata.detectedBy)].length} tools`}
+                            color="info"
+                            variant="outlined"
+                          />
+                        )}
+                      </Box>
+                      {vuln.metadata?.detectedBy && new Set(vuln.metadata.detectedBy).size > 1 && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                          Detected by: {[...new Set(vuln.metadata.detectedBy)].join(', ')}
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ maxWidth: 300 }}>
@@ -747,6 +762,13 @@ const ScanResults = ({ results, issuesFound, currentFile, scanId }) => {
                           </Typography>
                         ))}
                       </Box>
+                    )}
+
+                    {vuln.metadata?.detectedBy && new Set(vuln.metadata.detectedBy).size > 1 && (
+                      <Typography component="div" variant="body2" sx={{ mb: 2 }}>
+                        <strong>Detected by:</strong> {[...new Set(vuln.metadata.detectedBy)].join(', ')}
+                        <span> ({[...new Set(vuln.metadata.detectedBy)].length} tools total)</span>
+                      </Typography>
                     )}
                   </Box>
                 </AccordionDetails>

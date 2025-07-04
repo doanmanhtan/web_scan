@@ -729,6 +729,7 @@ const VulnerabilitiesPage = () => {
                   <TableCell>Severity</TableCell>
                   <TableCell>Name</TableCell>
                   <TableCell>Type</TableCell>
+                  <TableCell>Scan Name</TableCell>
                   <TableCell>File</TableCell>
                   <TableCell>Line</TableCell>
                   <TableCell>Tool</TableCell>
@@ -755,6 +756,9 @@ const VulnerabilitiesPage = () => {
                       {vuln.type || vuln.vulnerabilityType || 'Unknown'}
                     </TableCell>
                     <TableCell>
+                      {vuln.scanName || vuln.scan_name || vuln.scan?.name || vuln.scanId || 'N/A'}
+                    </TableCell>
+                    <TableCell>
                       {/* FIX: Handle file object properly */}
                       {typeof vuln.file === 'object' && vuln.file 
                         ? (vuln.file.fileName || vuln.file.name || 'Unknown file')
@@ -769,7 +773,10 @@ const VulnerabilitiesPage = () => {
                       }
                     </TableCell>
                     <TableCell>
-                      {vuln.tool || 'Unknown'}
+                      <Chip
+                        label={vuln.tool || 'Unknown tool'}
+                        size="small"
+                      />
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -852,21 +859,40 @@ const VulnerabilitiesPage = () => {
                         : (vuln.line || '?')
                     })
                   </Typography>
-                  <Chip 
-                    size="small" 
-                    label={vuln.tool || 'Unknown tool'} 
-                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip 
+                      size="small" 
+                      label={vuln.tool || 'Unknown tool'} 
+                    />
+                    {/* NEW: Show duplicate count if available */}
+                    {vuln.metadata?.detectedBy && new Set(vuln.metadata.detectedBy).size > 1 && (
+                      <Chip 
+                        size="small" 
+                        label={`${[...new Set(vuln.metadata.detectedBy)].length} tools`}
+                        color="info"
+                        variant="outlined"
+                      />
+                    )}
+                  </Box>
                 </Box>
               </AccordionSummary>
               <AccordionDetails>
-                {/* FIX: Use component="div" to avoid <p> containing <div> */}
                 <Typography component="div" variant="body2" sx={{ mb: 2 }}>
-                  <strong>Description:</strong> {
-                    typeof vuln.description === 'string' 
-                      ? vuln.description 
-                      : JSON.stringify(vuln.description)
-                  }
+                  <strong>Description:</strong>
+                  <span>
+                    {
+                      typeof vuln.description === 'string'
+                        ? (vuln.description.split('[Detected by:')[0].trim())
+                        : JSON.stringify(vuln.description)
+                    }
+                  </span>
                 </Typography>
+                {vuln.metadata?.detectedBy && new Set(vuln.metadata.detectedBy).size > 1 && (
+                  <Typography component="div" variant="body2" sx={{ mb: 2 }}>
+                    <strong>Detected by:</strong> {[...new Set(vuln.metadata.detectedBy)].join(', ')}
+                    <span> ({[...new Set(vuln.metadata.detectedBy)].length} tools total)</span>
+                  </Typography>
+                )}
                 
                 {/* FIX: Additional safe rendering for other fields */}
                 {vuln.cwe && (
@@ -1196,11 +1222,15 @@ const VulnerabilitiesPage = () => {
                       minWidth: 60,
                       userSelect: 'none',
                     }}>
-                      {codeDialog.code.split('\n').map((_, index) => (
-                        <div key={index} style={{ height: '21px', lineHeight: '21px' }}>
-                          {index + 1}
-                        </div>
-                      ))}
+                      {(codeDialog.snippet || codeDialog.code.split('\n')).map((line, idx) => {
+                        // Lấy số dòng thực tế nếu có, fallback về index+1
+                        const lineNumber = typeof line === 'object' && line.lineNumber ? line.lineNumber : (codeDialog.lineNumber ? codeDialog.lineNumber - Math.floor((codeDialog.snippet || []).length / 2) + idx : idx + 1);
+                        return (
+                          <div key={idx} style={{ height: '21px', lineHeight: '21px' }}>
+                            {lineNumber}
+                          </div>
+                        );
+                      })}
                     </Box>
                     
                     {/* Code column */}
@@ -1332,13 +1362,22 @@ const VulnerabilitiesPage = () => {
               </Grid>
               
               <Box sx={{ mt: 2 }}>
-                <Typography variant="body2">
-                  <strong>Description:</strong> {
-                    typeof codeDialog.vulnerability.description === 'string'
-                      ? codeDialog.vulnerability.description
-                      : JSON.stringify(codeDialog.vulnerability.description)
-                  }
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  <strong>Description:</strong>
+                  <span>
+                    {
+                      typeof codeDialog.vulnerability.description === 'string'
+                        ? (codeDialog.vulnerability.description.split('[Detected by:')[0].trim())
+                        : JSON.stringify(codeDialog.vulnerability.description)
+                    }
+                  </span>
                 </Typography>
+                {codeDialog.vulnerability.metadata?.detectedBy && new Set(codeDialog.vulnerability.metadata.detectedBy).size > 1 && (
+                  <Typography component="div" variant="body2" sx={{ mb: 2 }}>
+                    <strong>Detected by:</strong> {[...new Set(codeDialog.vulnerability.metadata.detectedBy)].join(', ')}
+                    <span> ({[...new Set(codeDialog.vulnerability.metadata.detectedBy)].length} tools total)</span>
+                  </Typography>
+                )}
               </Box>
               
               {codeDialog.vulnerability.remediation && (

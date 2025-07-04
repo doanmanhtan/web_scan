@@ -1,0 +1,117 @@
+rules:
+  - id: unsafe-length-assignment-buffer-overflow
+    pattern-either:
+      # Pattern 1: Phát hiện việc gán length từ input không tin cậy
+      - pattern: |
+          if (($CAST)$VAR <= sizeof($FIELD1) + sizeof($FIELD2) + sizeof($FIELD3)) {
+              $PACKET.length = $VAR;
+              ...
+          }
+      # Pattern 2: Phát hiện việc gán length mà không kiểm tra giá trị minimum
+      - pattern: |
+          if (($CAST)$VAR <= $SIZEOF_EXPR) {
+              $PACKET.length = $VAR;
+              ...
+          }
+      # Pattern 3: Phát hiện cast unsigned có thể che giấu giá trị âm
+      - pattern: |
+          if ((unsigned)$VAR <= $EXPR) {
+              $PACKET.length = $VAR;
+              ...
+          }
+    
+    message: |
+      Potential buffer overflow vulnerability detected. The code assigns a length value
+      from untrusted input without proper validation:
+      
+      Issues found:
+      1. No minimum value check for length field
+      2. Direct assignment of external input to packet length
+      3. Unsigned cast may hide negative values
+      4. Missing validation against actual buffer size
+      
+      Recommendations:
+      - Add minimum length validation (e.g., length >= MIN_PACKET_SIZE)
+      - Validate against maximum buffer capacity
+      - Check for negative values before casting
+      - Sanitize input before assignment
+      
+    severity: HIGH
+    languages: [c, cpp]
+    
+    metadata:
+      category: security
+      cwe: "CWE-120: Buffer Copy without Checking Size of Input"
+      owasp: "A1: Injection"
+      confidence: HIGH
+      impact: HIGH
+      likelihood: MEDIUM
+      
+  - id: unsafe-packet-length-validation
+    pattern: |
+      if ($CONDITION) {
+          $PACKET.length = $INPUT;
+          $RXLEN = 0;
+          *$STATE = $DECODE_STATE;
+      }
+    
+    metavariable-condition:
+      - metavariable: $CONDITION
+        regex: ".*unsigned.*<=.*sizeof.*"
+      - metavariable: $INPUT
+        regex: ".*byte.*|.*input.*|.*data.*"
+        
+    message: |
+      Unsafe packet length validation pattern detected. This pattern is vulnerable to:
+      - Buffer overflow attacks
+      - Integer overflow/underflow
+      - Malformed packet processing
+      
+      Consider implementing comprehensive input validation.
+      
+    severity: HIGH
+    languages: [c, cpp]
+    
+  - id: missing-minimum-length-check
+    pattern-either:
+      - pattern: |
+          if ($VAR <= $MAX_SIZE) {
+              $PACKET.length = $VAR;
+              ...
+          }
+      - pattern: |
+          if (($CAST)$VAR <= $MAX_SIZE) {
+              $PACKET.length = $VAR;
+              ...
+          }
+    
+    pattern-not: |
+      if ($VAR >= $MIN_SIZE && $VAR <= $MAX_SIZE) {
+          $PACKET.length = $VAR;
+          ...
+      }
+    
+    message: |
+      Missing minimum length validation. The code only checks maximum size but not minimum,
+      which can lead to underflow or malformed packet processing.
+      
+      Add minimum size validation: if (length >= MIN_SIZE && length <= MAX_SIZE)
+      
+    severity: MEDIUM
+    languages: [c, cpp]
+    
+  - id: unsigned-cast-hides-negative
+    pattern: |
+      if ((unsigned)$VAR <= $EXPR) {
+          $ASSIGNMENT;
+          ...
+      }
+    
+    message: |
+      Unsigned cast may hide negative values. Negative values cast to unsigned become 
+      very large positive numbers, potentially bypassing size checks.
+      
+      Validate input is non-negative before casting: if ($VAR >= 0 && (unsigned)$VAR <= $EXPR)
+      
+    severity: MEDIUM
+    languages: [c, cpp]
