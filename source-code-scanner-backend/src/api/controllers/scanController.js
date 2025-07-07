@@ -37,12 +37,6 @@ const scanController = {
       }
       
       try {
-        console.log('Calling scanService.createScan with:', {
-          scanData, 
-          fileCount: files.length,
-          userId
-        });
-        
         const result = await scanService.createScan(scanData, files, userId);
         
         res.status(201).json({
@@ -62,10 +56,6 @@ const scanController = {
           }
           
           throw new Error(`${errorMessage}: ${serviceError.message || 'Lỗi không xác định'}`);
-      // } catch (serviceError) {
-      //   console.error('Error from service:', serviceError);
-      //   // Không truy cập serviceError.error ở đây
-      //   throw serviceError; // Ném lại lỗi để xử lý ở khối catch ngoài
       }
     } catch (error) {
       console.error('Controller error:', error);
