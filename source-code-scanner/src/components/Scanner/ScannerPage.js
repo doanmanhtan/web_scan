@@ -250,15 +250,7 @@ function ScannerPage() {
         <Box sx={{ flex: '1 1 auto' }} />
         
         {activeStep === steps.length - 1 ? (
-          !isScanning && (
-            <Button 
-              variant="contained" 
-              color="primary"
-              startIcon={<SaveIcon />}
-            >
-              Save Report
-            </Button>
-          )
+          null
         ) : (
           <>
             {activeStep === 1 && (

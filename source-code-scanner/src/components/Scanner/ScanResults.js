@@ -253,6 +253,26 @@ const ScanResults = ({ results, issuesFound, currentFile, scanId }) => {
 
   console.log('scanId truyền vào:', scanId, 'token truyền vào:', token);
 
+  // Hàm xuất file JSON report
+  const handleSaveReport = () => {
+    const data = {
+      scanDate: new Date().toISOString(),
+      issuesFound: totalCount,
+      severityCounts,
+      toolCounts,
+      vulnerabilities,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `scan_report_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Box>
       {/* Header */}
@@ -274,7 +294,7 @@ const ScanResults = ({ results, issuesFound, currentFile, scanId }) => {
           </Grid>
           <Grid item xs={12} md={6}>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              <Button variant="outlined">Save Report</Button>
+              <Button variant="outlined" onClick={handleSaveReport}>Save Report</Button>
               <Button variant="outlined">Export</Button>
             </Box>
           </Grid>
@@ -329,12 +349,12 @@ const ScanResults = ({ results, issuesFound, currentFile, scanId }) => {
           </Grid>
           
           <Grid item xs={12} md={6}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
+            <Card sx={{ minWidth: 400, width: '100%', maxWidth: 700, height: 420, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <CardContent sx={{ width: '100%', height: '100%', p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography variant="subtitle1" gutterBottom>
                   Vulnerabilities by Severity
                 </Typography>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={350}>
                   {pieChartData.length > 0 ? (
                     <PieChart>
                       <Pie
@@ -364,12 +384,12 @@ const ScanResults = ({ results, issuesFound, currentFile, scanId }) => {
           </Grid>
           
           <Grid item xs={12} md={6}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
+            <Card sx={{ minWidth: 400, width: '100%', maxWidth: 700, height: 420, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <CardContent sx={{ width: '100%', height: '100%', p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography variant="subtitle1" gutterBottom>
                   Issues by Tool
                 </Typography>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={350}>
                   {toolChartData.length > 0 ? (
                     <BarChart data={toolChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
