@@ -1,0 +1,14 @@
+rules:
+  - id: c-array-off-by-one-bad-boundary
+    pattern: |
+      if ($IDX > $SIZE) {
+        ...
+      }
+    pattern-inside: |
+      ... 
+      $ARR[$IDX]
+      ...
+    message: |
+      Possible off-by-one out-of-bounds read: index is only checked with '>', should use '>=' to prevent access at $IDX == $SIZE.
+    languages: [c, cpp]
+    severity: ERROR

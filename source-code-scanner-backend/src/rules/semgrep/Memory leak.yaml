@@ -1,0 +1,236 @@
+rules:
+  # Rule 1: malloc without corresponding free
+  - id: malloc-without-free
+    pattern-either:
+      - pattern: |
+          $PTR = malloc(...);
+          ...
+          return $RET;
+      - pattern: |
+          $PTR = calloc(...);
+          ...
+          return $RET;
+      - pattern: |
+          $PTR = realloc(...);
+          ...
+          return $RET;
+    pattern-not: |
+      $PTR = malloc(...);
+      ...
+      free($PTR);
+      ...
+      return $RET;
+    message: "Potential memory leak: malloc/calloc/realloc without corresponding free"
+    languages: [c, cpp]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-401: Missing Release of Memory after Effective Lifetime"
+
+  # Rule 2: new without corresponding delete
+  - id: new-without-delete
+    pattern-either:
+      - pattern: |
+          $PTR = new $TYPE(...);
+          ...
+          return $RET;
+      - pattern: |
+          $PTR = new $TYPE[$SIZE];
+          ...
+          return $RET;
+    pattern-not: |
+      $PTR = new $TYPE(...);
+      ...
+      delete $PTR;
+      ...
+      return $RET;
+    message: "Potential memory leak: new without corresponding delete"
+    languages: [cpp]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-401: Missing Release of Memory after Effective Lifetime"
+
+  # Rule 3: new[] without delete[]
+  - id: new-array-without-delete-array
+    pattern: |
+      $PTR = new $TYPE[$SIZE];
+      ...
+      delete $PTR;
+    message: "Memory leak: new[] should be paired with delete[], not delete"
+    languages: [cpp]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-401: Missing Release of Memory after Effective Lifetime"
+
+  # Rule 4: malloc in conditional without free in all paths
+  - id: malloc-in-conditional-incomplete-free
+    pattern: |
+      if ($COND) {
+        $PTR = malloc(...);
+        ...
+      }
+      ...
+      return $RET;
+    pattern-not: |
+      if ($COND) {
+        $PTR = malloc(...);
+        ...
+      }
+      ...
+      if ($PTR) {
+        free($PTR);
+      }
+      ...
+      return $RET;
+    message: "Potential memory leak: malloc in conditional without free in all code paths"
+    languages: [c, cpp]
+    severity: WARNING
+
+  # Rule 5: Double allocation without free
+  - id: double-allocation-without-free
+    pattern: |
+      $PTR = malloc(...);
+      ...
+      $PTR = malloc(...);
+    message: "Memory leak: Double allocation without freeing first allocation"
+    languages: [c, cpp]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-401: Missing Release of Memory after Effective Lifetime"
+
+  # Rule 6: Reassignment of pointer without free
+  - id: pointer-reassignment-without-free
+    pattern: |
+      $PTR = malloc(...);
+      ...
+      $PTR = $OTHER;
+    pattern-not: |
+      $PTR = malloc(...);
+      ...
+      free($PTR);
+      ...
+      $PTR = $OTHER;
+    message: "Memory leak: Pointer reassignment without freeing original allocation"
+    languages: [c, cpp]
+    severity: ERROR
+
+  # Rule 7: malloc in loop without free
+  - id: malloc-in-loop-without-free
+    pattern-either:
+      - pattern: |
+          for (...; ...; ...) {
+            ...
+            $PTR = malloc(...);
+            ...
+          }
+      - pattern: |
+          while (...) {
+            ...
+            $PTR = malloc(...);
+            ...
+          }
+    pattern-not: |
+      for (...; ...; ...) {
+        ...
+        $PTR = malloc(...);
+        ...
+        free($PTR);
+        ...
+      }
+    message: "Potential memory leak: malloc in loop without corresponding free"
+    languages: [c, cpp]
+    severity: WARNING
+
+  # Rule 8: strdup without free
+  - id: strdup-without-free
+    pattern: |
+      $PTR = strdup(...);
+      ...
+      return $RET;
+    pattern-not: |
+      $PTR = strdup(...);
+      ...
+      free($PTR);
+      ...
+      return $RET;
+    message: "Memory leak: strdup without corresponding free"
+    languages: [c, cpp]
+    severity: WARNING
+
+  # Rule 9: Memory allocation in function without cleanup on error
+  - id: malloc-without-cleanup-on-error
+    pattern: |
+      $PTR = malloc(...);
+      if (!$PTR) {
+        return $ERR;
+      }
+      ...
+      if ($ERROR_CONDITION) {
+        return $ERR;
+      }
+    pattern-not: |
+      $PTR = malloc(...);
+      if (!$PTR) {
+        return $ERR;
+      }
+      ...
+      if ($ERROR_CONDITION) {
+        free($PTR);
+        return $ERR;
+      }
+    message: "Memory leak: Missing cleanup on error path"
+    languages: [c, cpp]
+    severity: WARNING
+
+  # Rule 10: File operations without proper cleanup
+  - id: file-operations-memory-leak
+    pattern: |
+      $PTR = malloc(...);
+      $FILE = fopen(...);
+      ...
+      if ($ERROR) {
+        return $ERR;
+      }
+    pattern-not: |
+      $PTR = malloc(...);
+      $FILE = fopen(...);
+      ...
+      if ($ERROR) {
+        free($PTR);
+        if ($FILE) fclose($FILE);
+        return $ERR;
+      }
+    message: "Memory leak: Missing cleanup of allocated memory on file operation error"
+    languages: [c, cpp]
+    severity: WARNING
+
+  # Rule 11: C++ smart pointer misuse
+  - id: raw-pointer-with-smart-pointer
+    pattern: |
+      std::unique_ptr<$TYPE> $PTR(new $TYPE(...));
+      ...
+      delete $PTR.get();
+    message: "Memory management error: Manual delete on smart pointer managed memory"
+    languages: [cpp]
+    severity: ERROR
+
+  # Rule 12: Memory leak in exception handling
+  - id: memory-leak-in-exception
+    pattern: |
+      $PTR = new $TYPE(...);
+      ...
+      throw $EXCEPTION;
+    pattern-not: |
+      $PTR = new $TYPE(...);
+      try {
+        ...
+      } catch (...) {
+        delete $PTR;
+        throw;
+      }
+    message: "Memory leak: Exception thrown without cleanup"
+    languages: [cpp]
+    severity: WARNING

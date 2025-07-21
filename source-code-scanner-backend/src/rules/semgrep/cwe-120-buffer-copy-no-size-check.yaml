@@ -1,0 +1,54 @@
+rules:
+  - id: cwe-120-buffer-copy-no-size-check
+    patterns:
+      - pattern: memcpy($DEST, $SRC, $LEN)
+      - pattern-not-inside: |
+          if ($LEN <= sizeof($DEST)) {
+            memcpy($DEST, $SRC, $LEN);
+          }
+    message: |
+      Possible buffer overflow: memcpy without checking destination buffer size (CWE-120).
+    languages: [c, cpp]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-120"
+      owasp: "A1:2017-Injection"
+
+  - id: cwe-120-strncpy-no-size-check
+    patterns:
+      - pattern: strncpy($DEST, $SRC, $LEN)
+      - pattern-not-inside: |
+          if ($LEN <= sizeof($DEST)) {
+            strncpy($DEST, $SRC, $LEN);
+          }
+    message: |
+      Possible buffer overflow: strncpy without checking destination buffer size (CWE-120).
+    languages: [c, cpp]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-120"
+      owasp: "A1:2017-Injection"
+
+  - id: cwe-120-dmaMotors-index
+    patterns:
+      - pattern: $RET = &dmaMotors[$INDEX];
+      - pattern-not-inside: |
+          if ($INDEX < MAX_SUPPORTED_MOTORS) {
+            ...
+          }
+      - pattern-not-inside: |
+          if ($INDEX >= MAX_SUPPORTED_MOTORS) {
+            ...
+          }
+    message: |
+      Truy cập mảng dmaMotors với chỉ số không kiểm tra giới hạn. Có thể gây buffer overflow (CWE-120).
+    languages: [c]
+    severity: ERROR
+
+  - id: cwe-120-strncpy-missing-null
+    pattern: |
+      strncpy($BUF, $SRC, $LEN);
+    message: |
+      Check for CWE-120: After strncpy, always ensure buffer is null-terminated.
+    languages: [c]
+    severity: WARNING
