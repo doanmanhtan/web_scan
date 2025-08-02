@@ -82,7 +82,13 @@ const ReportsPage = () => {
           setSelectedReportDetails({
             id: scan._id,
             name: scan.name,
-            date: new Date(scan.createdAt).toLocaleString(),
+            date: (() => {
+              const date = new Date(scan.createdAt);
+              const day = date.getDate().toString().padStart(2, '0');
+              const month = (date.getMonth() + 1).toString().padStart(2, '0');
+              const year = date.getFullYear();
+              return `${day}-${month}-${year}`;
+            })(),
             user: scan.createdBy ? scan.createdBy.username : 'N/A',
             status: scan.status,
             issuesCount: scan.issuesCounts.total || 0,
@@ -96,8 +102,20 @@ const ReportsPage = () => {
             filesScanned: scan.filesScanned || 0,
             linesOfCode: scan.linesOfCode || 0,
             tools: scan.tools || [],
-            startTime: new Date(scan.startTime).toLocaleString(),
-            endTime: new Date(scan.endTime).toLocaleString(),
+            startTime: (() => {
+              const date = new Date(scan.startTime);
+              const day = date.getDate().toString().padStart(2, '0');
+              const month = (date.getMonth() + 1).toString().padStart(2, '0');
+              const year = date.getFullYear();
+              return `${day}-${month}-${year}`;
+            })(),
+            endTime: (() => {
+              const date = new Date(scan.endTime);
+              const day = date.getDate().toString().padStart(2, '0');
+              const month = (date.getMonth() + 1).toString().padStart(2, '0');
+              const year = date.getFullYear();
+              return `${day}-${month}-${year}`;
+            })(),
             duration: scan.duration ? `${(scan.duration / 1000).toFixed(2)}s` : 'N/A',
           });
         } else {
@@ -112,7 +130,13 @@ const ReportsPage = () => {
           const mappedReports = (apiData.data.scans || []).map(scan => ({
             id: scan._id,
             name: scan.name,
-            date: new Date(scan.createdAt).toLocaleString(),
+            date: (() => {
+              const date = new Date(scan.createdAt);
+              const day = date.getDate().toString().padStart(2, '0');
+              const month = (date.getMonth() + 1).toString().padStart(2, '0');
+              const year = date.getFullYear();
+              return `${day}-${month}-${year}`;
+            })(),
             user: scan.createdBy ? scan.createdBy.username : 'N/A',
             status: scan.status,
             issuesCount: scan.issuesCounts.total || 0,

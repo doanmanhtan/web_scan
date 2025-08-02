@@ -92,13 +92,26 @@ const Dashboard = () => {
         if (!res.ok) throw new Error('Failed to fetch scan trends');
         const data = await res.json();
         const scans = data.data.scans || [];
-        const trends = scans.map(scan => ({
-          date: scan.createdAt.slice(0, 10), // yyyy-mm-dd
-          critical: scan.issuesCounts.critical || 0,
-          high: scan.issuesCounts.high || 0,
-          medium: scan.issuesCounts.medium || 0,
-          low: scan.issuesCounts.low || 0,
-        }));
+        // const trends = scans.map(scan => ({
+        //   date: scan.createdAt.slice(0, 10), // yyyy-mm-dd
+        //   critical: scan.issuesCounts.critical || 0,
+        //   high: scan.issuesCounts.high || 0,
+        //   medium: scan.issuesCounts.medium || 0,
+        //   low: scan.issuesCounts.low || 0,
+        // }));
+        const trends = scans.map(scan => {
+          const originalDate = scan.createdAt.slice(0, 10); // yyyy-mm-dd
+          const [year, month, day] = originalDate.split('-'); // Split the date
+          const formattedDate = `${day}-${month}-${year}`; // Format as dd-MM-yyyy
+          return {
+            date: formattedDate,
+            critical: scan.issuesCounts.critical || 0,
+            high: scan.issuesCounts.high || 0,
+            medium: scan.issuesCounts.medium || 0,
+            low: scan.issuesCounts.low || 0,
+          };
+        });
+        trends.sort((a, b) => new Date(a.date.split('-').reverse().join('-')) - new Date(b.date.split('-').reverse().join('-')));
         setIssuesOverTime(trends);
       } catch (err) {
         setIssuesOverTime([]);
@@ -115,16 +128,21 @@ const Dashboard = () => {
         if (!res.ok) throw new Error('Failed to fetch scans');
         const data = await res.json();
         // Lấy 5 scan mới nhất
-        const scans = (data.data.scans || []).slice(0, 5).map(scan => ({
-          id: scan._id,
-          name: scan.name,
-          date: scan.createdAt.slice(0, 10),
-          status: scan.status,
-          criticalIssues: scan.issuesCounts.critical || 0,
-          highIssues: scan.issuesCounts.high || 0,
-          mediumIssues: scan.issuesCounts.medium || 0,
-          lowIssues: scan.issuesCounts.low || 0,
-        }));
+        const scans = (data.data.scans || []).slice(0, 5).map(scan => {
+          const originalDate = scan.createdAt.slice(0, 10); // yyyy-mm-dd
+          const [year, month, day] = originalDate.split('-'); // Split the date
+          const formattedDate = `${day}-${month}-${year}`; // Format as dd-MM-yyyy
+          return {
+            id: scan._id,
+            name: scan.name,
+            date: formattedDate,
+            status: scan.status,
+            criticalIssues: scan.issuesCounts.critical || 0,
+            highIssues: scan.issuesCounts.high || 0,
+            mediumIssues: scan.issuesCounts.medium || 0,
+            lowIssues: scan.issuesCounts.low || 0,
+          };
+        });
         setRecentScans(scans);
       } catch (err) {
         setRecentScans([]);
@@ -156,12 +174,17 @@ const Dashboard = () => {
         const mappedProjects = Array.from(projectsMap.values())
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           .slice(0, 5)
-          .map(project => ({
-            id: project._id,
-            name: project.name,
-            lastScan: project.createdAt.slice(0, 10),
-            issuesCount: project.issuesCounts.total || 0,
-          }));
+          .map(project => {
+            const originalDate = project.createdAt.slice(0, 10); // yyyy-mm-dd
+            const [year, month, day] = originalDate.split('-'); // Split the date
+            const formattedDate = `${day}-${month}-${year}`; // Format as dd-MM-yyyy
+            return {
+              id: project._id,
+              name: project.name,
+              lastScan: formattedDate,
+              issuesCount: project.issuesCounts.total || 0,
+            };
+          });
 
         setRecentProjects(mappedProjects);
       } catch (err) {
