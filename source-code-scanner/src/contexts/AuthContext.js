@@ -12,6 +12,31 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
+  // Tạo API interceptor để tự động xử lý token expired
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      
+      // Kiểm tra nếu response là 401 (Unauthorized)
+      if (response.status === 401) {
+        // Token expired hoặc không hợp lệ
+        localStorage.removeItem('token');
+        setUser(null);
+        navigate('/login');
+        return response;
+      }
+      
+      return response;
+    };
+
+    // Cleanup function
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [navigate]);
+
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -29,12 +54,21 @@ export const AuthProvider = ({ children }) => {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
-      } else {
+      } else if (response.status === 401) {
+        // Token expired hoặc không hợp lệ
         localStorage.removeItem('token');
+        setUser(null);
+        // Không redirect ở đây vì có thể user đang ở login page
+      } else {
+        // Các lỗi khác
+        localStorage.removeItem('token');
+        setUser(null);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       localStorage.removeItem('token');
+      setUser(null);
+      // Không redirect ở đây vì có thể user đang ở login page
     } finally {
       setLoading(false);
     }

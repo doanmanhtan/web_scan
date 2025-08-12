@@ -157,10 +157,10 @@ const ScanResults = ({ results, issuesFound, currentFile, scanId }) => {
   };
 
   const COLORS = {
-    critical: '#d32f2f',
-    high: '#f44336',
-    medium: '#ff9800',
-    low: '#4caf50',
+    critical: '#f44336', // đỏ tươi
+    high: '#ff9800',     // cam
+    medium: '#2196f3',   // xanh dương
+    low: '#4caf50',      // xanh lá
   };
 
   // Chart data

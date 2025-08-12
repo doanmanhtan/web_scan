@@ -13,6 +13,10 @@ import { AuthProvider } from './contexts/AuthContext';
 // Import layouts
 import MainLayout from './layouts/MainLayout';
 
+// Import components
+import AuthGuard from './components/auth/AuthGuard';
+import ErrorBoundary from './components/common/ErrorBoundary';
+
 // Import pages
 import Dashboard from './components/Dashboard/Dashboard';
 import ScannerPage from './components/Scanner/ScannerPage';
@@ -29,32 +33,59 @@ import IssueDetailsPage from './components/Reports/IssueDetailsPage';
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <ScanProvider>
-        <Router>
-          <AuthProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/" element={<MainLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="scanner" element={<ScannerPage />} />
-                <Route path="reports" element={<ReportsPage />} />
-                <Route path="reports/:id" element={<ReportsPage />} />
-                <Route path="reports/:id/issues" element={<IssueDetailsPage />} />
-                <Route path="vulnerabilities" element={<VulnerabilitiesPage />} />
-                <Route path="vulnerabilities/:id" element={<VulnerabilityDetails />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="change-password" element={<ChangePassword />} />
-              </Route>
-            </Routes>
-          </AuthProvider>
-        </Router>
-      </ScanProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <ScanProvider>
+          <Router>
+            <AuthProvider>
+              <Routes>
+                {/* Public routes - không yêu cầu authentication */}
+                <Route path="/login" element={
+                  <AuthGuard requireAuth={false}>
+                    <Login />
+                  </AuthGuard>
+                } />
+                <Route path="/register" element={
+                  <AuthGuard requireAuth={false}>
+                    <Register />
+                  </AuthGuard>
+                } />
+                <Route path="/forgot-password" element={
+                  <AuthGuard requireAuth={false}>
+                    <ForgotPassword />
+                  </AuthGuard>
+                } />
+                
+                {/* Protected routes - yêu cầu authentication */}
+                <Route path="/" element={
+                  <AuthGuard requireAuth={true}>
+                    <MainLayout />
+                  </AuthGuard>
+                }>
+                  <Route index element={<Dashboard />} />
+                  <Route path="scanner" element={<ScannerPage />} />
+                  <Route path="reports" element={<ReportsPage />} />
+                  <Route path="reports/:id" element={<ReportsPage />} />
+                  <Route path="reports/:id/issues" element={<IssueDetailsPage />} />
+                  <Route path="vulnerabilities" element={<VulnerabilitiesPage />} />
+                  <Route path="vulnerabilities/:id" element={<VulnerabilityDetails />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="change-password" element={<ChangePassword />} />
+                </Route>
+                
+                {/* Protected user routes */}
+                <Route path="/profile" element={
+                  <AuthGuard requireAuth={true}>
+                    <Profile />
+                  </AuthGuard>
+                } />
+              </Routes>
+            </AuthProvider>
+          </Router>
+        </ScanProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

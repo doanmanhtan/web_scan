@@ -35,9 +35,11 @@ import {
   BarChart as BarChartIcon,
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
+import { useApi } from '../../hooks/useApi';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { get } = useApi();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,13 +53,8 @@ const Dashboard = () => {
       try {
         setLoading(true);
         setError('');
-        const res = await fetch('/api/scans', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        if (!res.ok) throw new Error('Failed to fetch dashboard data');
-        const data = await res.json();
+        const response = await get('/api/scans');
+        const data = await response.json();
         
         const allScans = data.data.scans || [];
         
@@ -84,21 +81,9 @@ const Dashboard = () => {
     // Lấy dữ liệu từng ngày cho biểu đồ thời gian
     const fetchTrends = async () => {
       try {
-        const res = await fetch('/api/scans', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        if (!res.ok) throw new Error('Failed to fetch scan trends');
-        const data = await res.json();
+        const response = await get('/api/scans');
+        const data = await response.json();
         const scans = data.data.scans || [];
-        // const trends = scans.map(scan => ({
-        //   date: scan.createdAt.slice(0, 10), // yyyy-mm-dd
-        //   critical: scan.issuesCounts.critical || 0,
-        //   high: scan.issuesCounts.high || 0,
-        //   medium: scan.issuesCounts.medium || 0,
-        //   low: scan.issuesCounts.low || 0,
-        // }));
         const trends = scans.map(scan => {
           const originalDate = scan.createdAt.slice(0, 10); // yyyy-mm-dd
           const [year, month, day] = originalDate.split('-'); // Split the date
@@ -120,13 +105,8 @@ const Dashboard = () => {
 
     const fetchRecentScans = async () => {
       try {
-        const res = await fetch('/api/scans', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        if (!res.ok) throw new Error('Failed to fetch scans');
-        const data = await res.json();
+        const response = await get('/api/scans');
+        const data = await response.json();
         // Lấy 5 scan mới nhất
         const scans = (data.data.scans || []).slice(0, 5).map(scan => {
           const originalDate = scan.createdAt.slice(0, 10); // yyyy-mm-dd
@@ -152,13 +132,8 @@ const Dashboard = () => {
     // Lấy dữ liệu Recent Projects từ API scans và xử lý
     const fetchRecentProjects = async () => {
       try {
-        const res = await fetch('/api/scans', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        if (!res.ok) throw new Error('Failed to fetch projects');
-        const apiData = await res.json();
+        const response = await get('/api/scans');
+        const apiData = await response.json();
         const scans = apiData.data.scans || [];
 
         // Nhóm các scan theo tên (tạm xem là tên project) và lấy scan gần nhất cho mỗi project
@@ -196,7 +171,7 @@ const Dashboard = () => {
     fetchTrends();
     fetchRecentScans();
     fetchRecentProjects();
-  }, []);
+  }, [get]);
 
   // Thống nhất màu sắc
   const COLORS = {
