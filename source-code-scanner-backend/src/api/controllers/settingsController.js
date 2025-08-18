@@ -4,6 +4,7 @@ const path = require('path');
 const { logger } = require('../../utils/logger');
 const { scannerConfig } = require('../../config/scanners');
 const appConfig = require('../../config/app');
+const configService = require('../../services/configService');
 
 /**
  * Settings controller
@@ -16,11 +17,8 @@ const settingsController = {
    */
   getScannerPaths: async (req, res) => {
     try {
-      const scannerPaths = {};
-      
-      for (const [scanner, config] of Object.entries(scannerConfig)) {
-        scannerPaths[scanner] = config.path;
-      }
+      // Use dynamic config service instead of static config
+      const scannerPaths = configService.getScannerPaths();
       
       res.status(200).json({
         success: true,
@@ -46,8 +44,8 @@ const settingsController = {
       const updates = req.body;
       
       // Validate updates
-      for (const [scanner, path] of Object.entries(updates)) {
-        if (!scannerConfig[scanner]) {
+      for (const [scanner, scannerUpdates] of Object.entries(updates)) {
+        if (!configService.getScannerConfig(scanner)) {
           return res.status(400).json({
             success: false,
             message: `Unknown scanner: ${scanner}`
@@ -55,25 +53,163 @@ const settingsController = {
         }
       }
       
-      // In a real application, you would update the scanner paths in the database
-      // and reload the configuration. For this example, we'll just return the updated paths.
+      // Update configuration using the service
+      const results = configService.updateMultipleScanners(updates);
       
-      const updatedPaths = {};
-      for (const [scanner, config] of Object.entries(scannerConfig)) {
-        updatedPaths[scanner] = updates[scanner] || config.path;
+      // Check for errors
+      const errors = Object.entries(results).filter(([_, result]) => result.error);
+      if (errors.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Some scanner updates failed',
+          errors: errors.reduce((acc, [scanner, result]) => {
+            acc[scanner] = result.error;
+            return acc;
+          }, {})
+        });
       }
+      
+      // Force reload config to ensure ScannerFactory gets latest changes
+      configService.forceReloadConfig();
+      
+      // Get updated configurations
+      const updatedConfigs = configService.getConfig();
       
       res.status(200).json({
         success: true,
-        message: 'Scanner paths updated successfully',
-        data: updatedPaths
+        message: 'Scanner configurations updated successfully',
+        data: updatedConfigs
       });
     } catch (error) {
       logger.error(`Error in updateScannerPaths controller: ${error.message}`);
       
       res.status(500).json({
         success: false,
-        message: 'Error updating scanner paths'
+        message: 'Error updating scanner configurations'
+      });
+    }
+  },
+
+  /**
+   * Test scanner connection
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  testScannerConnection: async (req, res) => {
+    try {
+      const { scanner } = req.params;
+      const { path: testPath } = req.body;
+      
+      if (!scanner) {
+        return res.status(400).json({
+          success: false,
+          message: 'Scanner name is required'
+        });
+      }
+      
+      // Test connection using the service with specific path if provided
+      let result;
+      if (testPath) {
+        result = await configService.testScannerConnectionWithPath(scanner, testPath);
+      } else {
+        result = await configService.testScannerConnection(scanner);
+      }
+      
+      res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      logger.error(`Error in testScannerConnection controller: ${error.message}`);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Error testing scanner connection'
+      });
+    }
+  },
+
+  /**
+   * Get scanner configuration details
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  getScannerConfig: async (req, res) => {
+    try {
+      const { scanner } = req.params;
+      
+      if (!scanner) {
+        return res.status(400).json({
+          success: false,
+          message: 'Scanner name is required'
+        });
+      }
+      
+      const config = configService.getScannerConfig(scanner);
+      if (!config) {
+        return res.status(404).json({
+          success: false,
+          message: `Scanner not found: ${scanner}`
+        });
+      }
+      
+      res.status(200).json({
+        success: true,
+        data: config
+      });
+    } catch (error) {
+      logger.error(`Error in getScannerConfig controller: ${error.message}`);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching scanner configuration'
+      });
+    }
+  },
+
+  /**
+   * Get all scanner configurations
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  getAllScannerConfigs: async (req, res) => {
+    try {
+      const configs = configService.getConfig();
+      
+      res.status(200).json({
+        success: true,
+        data: configs
+      });
+    } catch (error) {
+      logger.error(`Error in getAllScannerConfigs controller: ${error.message}`);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching scanner configurations'
+      });
+    }
+  },
+
+  /**
+   * Reset scanner configurations to defaults
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  resetScannerConfigs: async (req, res) => {
+    try {
+      const configs = configService.resetToDefaults();
+      
+      res.status(200).json({
+        success: true,
+        message: 'Scanner configurations reset to defaults',
+        data: configs
+      });
+    } catch (error) {
+      logger.error(`Error in resetScannerConfigs controller: ${error.message}`);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Error resetting scanner configurations'
       });
     }
   },
@@ -608,6 +744,38 @@ const settingsController = {
     } catch (error) {
       logger.error(`Error in importScannerRule controller: ${error.message}`);
       res.status(500).json({ success: false, message: 'Error importing scanner rule' });
+    }
+  },
+
+  /**
+   * Get current scanner paths for debugging
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  getCurrentScannerPaths: async (req, res) => {
+    try {
+      // Force reload to get latest config
+      configService.forceReloadConfig();
+      
+      const scannerPaths = configService.getScannerPaths();
+      const fullConfigs = configService.getConfig();
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          paths: scannerPaths,
+          fullConfigs: fullConfigs,
+          configFile: configService.configPath,
+          lastModified: configService.lastLoadTime
+        }
+      });
+    } catch (error) {
+      logger.error(`Error in getCurrentScannerPaths controller: ${error.message}`);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching current scanner paths'
+      });
     }
   }
 };

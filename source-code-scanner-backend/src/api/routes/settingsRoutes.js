@@ -12,8 +12,23 @@ router.use(authenticate);
 // Get scanner paths
 router.get('/scanners', settingsController.getScannerPaths);
 
+// Get current scanner paths (for debugging)
+router.get('/scanners/current', settingsController.getCurrentScannerPaths);
+
 // Update scanner paths
 router.put('/scanners', authorize(['admin']), settingsController.updateScannerPaths);
+
+// Get all scanner configurations
+router.get('/scanners/configs', settingsController.getAllScannerConfigs);
+
+// Get specific scanner configuration
+router.get('/scanners/:scanner/config', settingsController.getScannerConfig);
+
+// Test scanner connection
+router.post('/scanners/:scanner/test', settingsController.testScannerConnection);
+
+// Reset scanner configurations to defaults
+router.post('/scanners/reset', authorize(['admin']), settingsController.resetScannerConfigs);
 
 // Get scanner rules
 router.get('/rules', settingsController.getScannerRules);

@@ -419,143 +419,127 @@ const RuleSettings = () => {
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        Rules Configuration
-      </Typography>
-      <Typography variant="body2" color="text.secondary" paragraph>
-        Manage your scan rules and custom rule configurations.
-      </Typography>
-      
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
       
       {/* Statistics Cards */}
       {ruleStats && (
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
+        <Box display="flex" gap={3} sx={{ mb: 4 }}>
+          {/* Total Rules Card - Left Sidebar - 20% width */}
+          <Box flex="0 0 20%">
+            <Card 
+              elevation={0}
+              sx={{ 
+                height: '100%',
+                border: 'none',
+                borderRadius: '16px 16px 0 0',
+                background: '#ffffff',
+                transition: 'all 0.3s ease-in-out',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 20px rgba(33, 150, 243, 0.15)'
+                }
+              }}
+            >
+              <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                <Typography 
+                  color="textSecondary" 
+                  gutterBottom 
+                  sx={{ 
+                    fontWeight: 600, 
+                    mb: 2, 
+                    fontSize: '1rem',
+                    color: '#1976d2'
+                  }}
+                >
                   Total Rules
                 </Typography>
-                <Typography variant="h4">
+                <Typography 
+                  variant="h2" 
+                  color="primary.main" 
+                  fontWeight="bold" 
+                  sx={{ 
+                    mb: 2,
+                    fontSize: '2.5rem',
+                    color: '#1976d2'
+                  }}
+                >
                   {ruleStats.total || rules.length}
                 </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Enabled Rules
-                </Typography>
-                <Typography variant="h4">
-                  {ruleStats.enabled || rules.filter(r => r.enabled).length}
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: '#1976d2',
+                    fontSize: '0.875rem',
+                    opacity: 0.8
+                  }}
+                >
+                  Rules available for scanning
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
-          <Grid xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Security Rules
-                </Typography>
-                <Typography variant="h4">
-                  {ruleStats.security || rules.filter(r => r.category === 'security').length}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Custom Rules
-                </Typography>
-                <Typography variant="h4">
-                  {ruleStats.custom || rules.filter(r => r.isCustom || r.custom).length}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
-      
-      <Grid container spacing={3}>
-        <Grid xs={12} md={6}>
-          <TextField 
-            fullWidth 
-            label="Rules Directory" 
-            variant="outlined"
-            value={ruleDirectory}
-            onChange={handleDirectoryChange}
-            helperText="Directory containing custom rule definitions"
-            sx={{ mb: 3 }}
-          />
+          </Box>
           
-          <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel>Default Severity</InputLabel>
-            <Select
-              value={defaultSeverity}
-              label="Default Severity"
-              onChange={handleSeverityChange}
+          {/* Custom Rules Section - Main Content - 80% width */}
+          <Box flex="0 0 80%">
+            <Paper 
+              elevation={0}
+              sx={{ 
+                p: 2,
+                height: '100%',
+                border: 'none',
+                borderRadius: 2,
+                background: '#ffffff',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+              }}
             >
-              <MenuItem value="critical">Critical</MenuItem>
-              <MenuItem value="high">High</MenuItem>
-              <MenuItem value="medium">Medium</MenuItem>
-              <MenuItem value="low">Low</MenuItem>
-            </Select>
-          </FormControl>
-          
-          <FormGroup>
-            <FormControlLabel 
-              control={
-                <Switch 
-                  checked={scanOnSave} 
-                  onChange={handleSwitchChange}
-                  name="scanOnSave"
-                />
-              } 
-              label="Scan files on save" 
-            />
-            <FormControlLabel 
-              control={
-                <Switch 
-                  checked={enableAutoScan} 
-                  onChange={handleSwitchChange}
-                  name="enableAutoScan"
-                />
-              } 
-              label="Enable automatic periodic scanning" 
-            />
-          </FormGroup>
-        </Grid>
-        
-        <Grid xs={12} md={6}>
-          <Paper variant="outlined" sx={{ mb: 2 }}>
-            <CardHeader 
-              title="Custom Rules"
-              action={
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Box display="flex" alignItems="center">
+                  <CodeIcon sx={{ fontSize: 24, mr: 2, color: '#1976d2' }} />
+                  <Typography variant="h5" fontWeight="bold" sx={{ color: '#1976d2' }}>
+                    Custom Rules
+                  </Typography>
+                </Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button 
                     startIcon={<AddIcon />}
                     variant="contained"
                     size="small"
                     onClick={handleOpenAddDialog}
+                    sx={{
+                      borderRadius: 2,
+                      background: 'linear-gradient(135deg, #9c27b0 0%, #673ab7 100%)',
+                      color: 'white',
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      px: 2,
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #8e24aa 0%, #5e35b1 100%)'
+                      }
+                    }}
                   >
                     Add Rule
                   </Button>
                   <Button
                     startIcon={<ImportIcon />}
-                    variant="outlined"
+                    variant="contained"
                     size="small"
                     component="label"
                     title="Import rules from file"
+                    sx={{
+                      borderRadius: 2,
+                      background: 'linear-gradient(135deg, #9c27b0 0%, #673ab7 100%)',
+                      color: 'white',
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      px: 2,
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #8e24aa 0%, #5e35b1 100%)'
+                      }
+                    }}
                   >
                     Import
                     <input
@@ -565,6 +549,95 @@ const RuleSettings = () => {
                       onChange={handleImportRules}
                     />
                   </Button>
+                </Box>
+              </Box>
+              
+              {/* Search and Filter */}
+              <Box sx={{ mb: 3 }}>
+                <TextField
+                  fullWidth
+                  placeholder="Search rules..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  sx={{ mb: 2 }}
+                  InputProps={{
+                    startAdornment: <SearchIcon sx={{ mr: 1, color: '#757575' }} />,
+                    sx: {
+                      borderRadius: 2,
+                      backgroundColor: '#fafafa',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#e0e0e0'
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#1976d2'
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#1976d2',
+                        borderWidth: 2
+                      }
+                    }
+                  }}
+                />
+                
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel sx={{ color: '#757575' }}>Category</InputLabel>
+                    <Select
+                      value={selectedCategory}
+                      label="Category"
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      sx={{
+                        borderRadius: 2,
+                        backgroundColor: '#fafafa',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#e0e0e0'
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1976d2'
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1976d2',
+                          borderWidth: 2
+                        }
+                      }}
+                    >
+                      {categories.map(cat => (
+                        <MenuItem key={cat} value={cat}>
+                          {cat === 'all' ? 'All Categories' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel sx={{ color: '#757575' }}>Scanner</InputLabel>
+                    <Select
+                      value={selectedScanner}
+                      label="Scanner"
+                      onChange={(e) => setSelectedScanner(e.target.value)}
+                      sx={{
+                        borderRadius: 2,
+                        backgroundColor: '#fafafa',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#e0e0e0'
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1976d2'
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1976d2',
+                          borderWidth: 2
+                        }
+                      }}
+                    >
+                      {scanners.map(scanner => (
+                        <MenuItem key={scanner} value={scanner}>
+                          {scanner === 'all' ? 'All Scanners' : scanner}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  
                   <Button
                     startIcon={<ExportIcon />}
                     variant="outlined"
@@ -572,160 +645,164 @@ const RuleSettings = () => {
                     onClick={handleExportRules}
                     disabled={rules.length === 0}
                     title="Export current rules to JSON file"
+                    sx={{
+                      borderRadius: 2,
+                      borderColor: '#1976d2',
+                      color: '#1976d2',
+                      borderWidth: 2,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      '&:hover': {
+                        borderColor: '#1565c0',
+                        backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                      }
+                    }}
                   >
                     Export
                   </Button>
                 </Box>
-              }
-            />
-            <Divider />
-            
-            {/* Search and Filter */}
-            <Box sx={{ p: 2 }}>
-              <TextField
-                fullWidth
-                placeholder="Search rules..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                }}
-                sx={{ mb: 2 }}
-              />
+              </Box>
               
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>Category</InputLabel>
-                  <Select
-                    value={selectedCategory}
-                    label="Category"
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                  >
-                    {categories.map(cat => (
-                      <MenuItem key={cat} value={cat}>
-                        {cat === 'all' ? 'All Categories' : cat.charAt(0).toUpperCase() + cat.slice(1)}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>Scanner</InputLabel>
-                  <Select
-                    value={selectedScanner}
-                    label="Scanner"
-                    onChange={(e) => setSelectedScanner(e.target.value)}
-                  >
-                    {scanners.map(scanner => (
-                      <MenuItem key={scanner} value={scanner}>
-                        {scanner === 'all' ? 'All Scanners' : scanner}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-            </Box>
-            
-            {loading ? (
-              <Box sx={{ p: 3, textAlign: 'center' }}>
-                <CircularProgress />
-                <Typography sx={{ mt: 2 }}>Loading rules...</Typography>
-              </Box>
-            ) : (
-              <List>
-                {paginatedRules.map((rule, index) => (
-                  <React.Fragment key={rule.id || index}>
-                    <ListItem>
-                      <ListItemIcon>
-                        {getCategoryIcon(rule.category)}
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            {rule.name || 'Unnamed Rule'}
-                            <Chip 
-                              label={rule.category || 'unknown'} 
-                              size="small" 
-                              color={getCategoryColor(rule.category)}
-                              sx={{ ml: 1 }}
+              {/* Rules List */}
+              {loading ? (
+                <Box sx={{ p: 3, textAlign: 'center' }}>
+                  <CircularProgress />
+                  <Typography sx={{ mt: 2 }}>Loading rules...</Typography>
+                </Box>
+              ) : (
+                <Box sx={{ maxHeight: '400px', overflow: 'auto' }}>
+                  <List sx={{ p: 0 }}>
+                    {paginatedRules.map((rule, index) => (
+                      <React.Fragment key={rule.id || index}>
+                        <ListItem sx={{ px: 0, py: 1.5 }}>
+                          <ListItemIcon sx={{ minWidth: 40 }}>
+                            {getCategoryIcon(rule.category)}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 0.5 }}>
+                                <Typography variant="body1" fontWeight={500} sx={{ mr: 1, color: '#212121' }}>
+                                  {rule.name || 'Unnamed Rule'}
+                                </Typography>
+                                <Chip 
+                                  label={rule.category || 'unknown'} 
+                                  size="small" 
+                                  color={getCategoryColor(rule.category)}
+                                  sx={{ 
+                                    mr: 1,
+                                    backgroundColor: '#f5f5f5',
+                                    color: '#757575',
+                                    fontSize: '0.75rem'
+                                  }}
+                                />
+                                {rule.severity && (
+                                  <Chip 
+                                    label={rule.severity} 
+                                    size="small" 
+                                    variant="outlined"
+                                    sx={{
+                                      fontSize: '0.75rem',
+                                      borderColor: '#e0e0e0',
+                                      color: '#757575'
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                            }
+                            secondary={
+                              <Typography variant="body2" sx={{ color: '#757575', fontSize: '0.875rem' }}>
+                                {rule.description || shortenPath(rule.path) || 'No description'}
+                              </Typography>
+                            }
+                          />
+                          <ListItemSecondaryAction>
+                            <Switch
+                              edge="end"
+                              checked={rule.enabled || false}
+                              onChange={() => handleRuleToggle(rule.id)}
+                              sx={{
+                                mr: 1,
+                                '& .MuiSwitch-switchBase': {
+                                  color: '#e0e0e0'
+                                },
+                                '& .MuiSwitch-switchBase.Mui-checked': {
+                                  color: '#1976d2'
+                                }
+                              }}
                             />
-                            {rule.severity && (
-                              <Chip 
-                                label={rule.severity} 
-                                size="small" 
-                                variant="outlined"
-                                sx={{ ml: 1 }}
-                              />
-                            )}
-                          </Box>
-                        }
-                        secondary={rule.description || shortenPath(rule.path) || 'No description'}
-                      />
-                      <ListItemSecondaryAction>
-                        <Switch
-                          edge="end"
-                          checked={rule.enabled || false}
-                          onChange={() => handleRuleToggle(rule.id)}
+                            <Tooltip title="View Details">
+                              <IconButton edge="end" onClick={() => handleViewRule(rule.id)} sx={{ mr: 0.5 }}>
+                                <ViewIcon fontSize="small" sx={{ color: '#757575' }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Edit Rule">
+                              <IconButton edge="end" onClick={() => handleOpenEditDialog(rule)} sx={{ mr: 0.5 }}>
+                                <EditIcon fontSize="small" sx={{ color: '#757575' }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete Rule">
+                              <IconButton edge="end" onClick={() => handleDeleteRule(rule.id)}>
+                                <DeleteIcon fontSize="small" sx={{ color: '#757575' }} />
+                              </IconButton>
+                            </Tooltip>
+                          </ListItemSecondaryAction>
+                        </ListItem>
+                        {index < paginatedRules.length - 1 && <Divider variant="inset" component="li" sx={{ ml: 6 }} />}
+                      </React.Fragment>
+                    ))}
+                    {paginatedRules.length === 0 && !loading && (
+                      <ListItem>
+                        <ListItemText
+                          primary="No rules found"
+                          secondary={searchTerm || selectedCategory !== 'all' || selectedScanner !== 'all' 
+                            ? "Try adjusting your search or filters" 
+                            : "Click 'Add Rule' to create a new rule"}
                         />
-                        <Tooltip title="View Details">
-                          <IconButton edge="end" onClick={() => handleViewRule(rule.id)}>
-                            <ViewIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Edit Rule">
-                          <IconButton edge="end" onClick={() => handleOpenEditDialog(rule)}>
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete Rule">
-                          <IconButton edge="end" onClick={() => handleDeleteRule(rule.id)}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                    {index < paginatedRules.length - 1 && <Divider variant="inset" component="li" />}
-                  </React.Fragment>
-                ))}
-                {paginatedRules.length === 0 && !loading && (
-                  <ListItem>
-                    <ListItemText
-                      primary="No rules found"
-                      secondary={searchTerm || selectedCategory !== 'all' || selectedScanner !== 'all' 
-                        ? "Try adjusting your search or filters" 
-                        : "Click 'Add Rule' to create a new rule"}
-                    />
-                  </ListItem>
-                )}
-              </List>
-            )}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
-              <Pagination
-                count={Math.ceil(rules.length / rowsPerPage)}
-                page={page}
-                onChange={(e, value) => setPage(value)}
-                color="primary"
-              />
-              <FormControl size="small" sx={{ minWidth: 100, ml: 2 }}>
-                <InputLabel>Rows</InputLabel>
-                <Select
-                  value={rowsPerPage}
-                  label="Rows"
-                  onChange={e => setRowsPerPage(Number(e.target.value))}
-                >
-                  <MenuItem value={5}>5</MenuItem>
-                  <MenuItem value={20}>20</MenuItem>
-                  <MenuItem value={50}>50</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          </Paper>
-          
-          <Alert severity="info" icon={<DescriptionIcon />}>
-            Custom rules allow you to define specific patterns to look for in your code. Rules are written in YAML format.
-          </Alert>
-        </Grid>
-      </Grid>
+                      </ListItem>
+                    )}
+                  </List>
+                </Box>
+              )}
+              
+              {/* Pagination and Rows Control */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 3, pt: 2, borderTop: '1px solid', borderColor: '#e0e0e0' }}>
+                <Pagination
+                  count={Math.ceil(rules.length / rowsPerPage)}
+                  page={page}
+                  onChange={(e, value) => setPage(value)}
+                  color="primary"
+                  size="small"
+                  sx={{
+                    '& .MuiPaginationItem-root.Mui-selected': {
+                      backgroundColor: '#1976d2',
+                      color: 'white'
+                    }
+                  }}
+                />
+                <FormControl size="small" sx={{ minWidth: 100 }}>
+                  <InputLabel sx={{ color: '#757575' }}>Rows</InputLabel>
+                  <Select
+                    value={rowsPerPage}
+                    label="Rows"
+                    onChange={e => setRowsPerPage(Number(e.target.value))}
+                    sx={{
+                      borderRadius: 2,
+                      backgroundColor: '#fafafa',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#e0e0e0'
+                      }
+                    }}
+                  >
+                    <MenuItem value={5}>5</MenuItem>
+                    <MenuItem value={20}>20</MenuItem>
+                    <MenuItem value={50}>50</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+            </Paper>
+          </Box>
+        </Box>
+      )}
       
       {/* Add/Edit Rule Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
@@ -751,7 +828,7 @@ const RuleSettings = () => {
             rows={3}
           />
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid xs={12} sm={6}>
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Category</InputLabel>
                 <Select
@@ -768,7 +845,7 @@ const RuleSettings = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid xs={12} sm={6}>
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Scanner</InputLabel>
                 <Select

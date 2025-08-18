@@ -88,14 +88,14 @@ class CppcheckScanner extends BaseScanner {
    */
   async scanDirectory(directory, outputPath) {
     try {
-      console.log(`\n=== Starting FIXED Cppcheck Scan ===`);
-      console.log(`Directory: ${directory}`);
-      console.log(`Output path: ${outputPath}`);
-      console.log(`Cppcheck path: ${this.cppcheckPath}`);
+      // console.log(`\n=== Starting FIXED Cppcheck Scan ===`);
+      // console.log(`Directory: ${directory}`);
+      // console.log(`Output path: ${outputPath}`);
+      // console.log(`Cppcheck path: ${this.cppcheckPath}`);
 
       // Get source files
       const sourceFiles = this.getSourceFiles(directory);
-      console.log(`Found ${sourceFiles.length} supported files to scan: ${sourceFiles.map(f => path.basename(f))}`);
+      // console.log(`Found ${sourceFiles.length} supported files to scan: ${sourceFiles.map(f => path.basename(f))}`);
 
       if (sourceFiles.length === 0) {
         console.log(`No supported files found for cppcheck scan`);
@@ -126,28 +126,28 @@ class CppcheckScanner extends BaseScanner {
       // Try commands in order
       for (let i = 0; i < commands.length; i++) {
         const command = commands[i];
-        console.log(`\n🔍 Trying cppcheck strategy ${i + 1}/${commands.length}:`);
-        console.log(`Command: ${command}`);
+        // console.log(`\n🔍 Trying cppcheck strategy ${i + 1}/${commands.length}:`);
+        // console.log(`Command: ${command}`);
 
         try {
           // FIXED: Better execution with proper error handling
           const result = await this.executeCommand(command);
           
-          console.log(`Strategy ${i + 1} exit code: ${result.exitCode}`);
-          console.log(`Stdout length: ${result.stdout.length}`);
-          console.log(`Stderr length: ${result.stderr.length}`);
+          // console.log(`Strategy ${i + 1} exit code: ${result.exitCode}`);
+          // console.log(`Stdout length: ${result.stdout.length}`);
+          // console.log(`Stderr length: ${result.stderr.length}`);
 
           // Strategy 1: Try XML parsing first
           if (i === 0 && fs.existsSync(xmlOutputPath)) {
-            console.log(`📄 XML file created: ${xmlOutputPath}`);
+            // console.log(`📄 XML file created: ${xmlOutputPath}`);
             const xmlStats = fs.statSync(xmlOutputPath);
-            console.log(`📄 XML file size: ${xmlStats.size} bytes`);
+            // console.log(`📄 XML file size: ${xmlStats.size} bytes`);
             
             if (xmlStats.size > 100) { // XML has content
               vulnerabilities = this.parseXmlOutput(xmlOutputPath, directory);
               if (vulnerabilities.length > 0) {
                 scanSuccessful = true;
-                console.log(`✅ XML parsing found ${vulnerabilities.length} vulnerabilities`);
+                // console.log(`✅ XML parsing found ${vulnerabilities.length} vulnerabilities`);
                 break;
               } else {
                 console.log(`⚠️ XML parsing found no vulnerabilities`);
@@ -158,13 +158,13 @@ class CppcheckScanner extends BaseScanner {
           // Fallback: Parse text output
           const textOutput = result.stderr || result.stdout;
           if (textOutput && textOutput.trim()) {
-            console.log(`📝 Parsing text output (${textOutput.length} chars)...`);
+            // console.log(`📝 Parsing text output (${textOutput.length} chars)...`);
             const textVulns = this.parseTextOutput(textOutput, directory);
             
             if (textVulns.length > 0) {
               vulnerabilities = textVulns;
               scanSuccessful = true;
-              console.log(`✅ Text parsing found ${vulnerabilities.length} vulnerabilities`);
+              // console.log(`✅ Text parsing found ${vulnerabilities.length} vulnerabilities`);
               break;
             } else {
               console.log(`⚠️ Text parsing found no vulnerabilities`);
@@ -189,7 +189,7 @@ class CppcheckScanner extends BaseScanner {
       }
 
       if (!scanSuccessful || vulnerabilities.length === 0) {
-        console.log(`⚠️ All strategies failed or found no issues`);
+        // console.log(`⚠️ All strategies failed or found no issues`);
         // FIXED: Still create result with file count
         return this.createEmptyResult(sourceFiles.length);
       }
@@ -267,10 +267,10 @@ class CppcheckScanner extends BaseScanner {
    */
   parseXmlOutput(xmlPath, baseDirectory) {
     try {
-      console.log(`🔍 Parsing XML file: ${xmlPath}`);
+      // console.log(`🔍 Parsing XML file: ${xmlPath}`);
       
       const xmlContent = fs.readFileSync(xmlPath, 'utf8');
-      console.log(`📄 XML content length: ${xmlContent.length} characters`);
+      // console.log(`📄 XML content length: ${xmlContent.length} characters`);
       
       // Simple XML parsing without external dependencies
       const vulnerabilities = [];
@@ -283,7 +283,7 @@ class CppcheckScanner extends BaseScanner {
         return [];
       }
       
-      console.log(`🔍 Found ${errorMatches.length} error entries in XML`);
+      // console.log(`🔍 Found ${errorMatches.length} error entries in XML`);
       
       for (const errorMatch of errorMatches) {
         try {
@@ -296,7 +296,7 @@ class CppcheckScanner extends BaseScanner {
         }
       }
       
-      console.log(`✅ Parsed ${vulnerabilities.length} vulnerabilities from XML`);
+      // console.log(`✅ Parsed ${vulnerabilities.length} vulnerabilities from XML`);
       return vulnerabilities;
       
     } catch (error) {

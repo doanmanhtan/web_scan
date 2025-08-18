@@ -1,0 +1,89 @@
+{
+  "semgrep": {
+    "path": "/home/kali/Desktop/web/web_scan/source-code-scanner-backend/src",
+    "enabled": true,
+    "timeoutMs": 300000,
+    "supportedFileTypes": [
+      ".c",
+      ".cpp",
+      ".h",
+      ".hpp",
+      ".js",
+      ".py",
+      ".java",
+      ".go"
+    ],
+    "rules": "/home/kali/Desktop/web/web_scan/source-code-scanner-backend/src/rules/semgrep",
+    "defaultArgs": [
+      "--json"
+    ]
+  },
+  "snyk": {
+    "path": "/usr/local/bin/snyk",
+    "enabled": true,
+    "timeoutMs": 300000,
+    "supportedFileTypes": [
+      ".c",
+      ".cpp",
+      ".h",
+      ".hpp",
+      ".js",
+      ".py",
+      ".java",
+      ".go"
+    ],
+    "rules": null,
+    "defaultArgs": [
+      "code",
+      "test",
+      "--json"
+    ],
+    "command": "code test"
+  },
+  "clangTidy": {
+    "path": "/usr/bin/clang-tidy",
+    "enabled": true,
+    "timeoutMs": 300000,
+    "supportedFileTypes": [
+      ".c",
+      ".cpp",
+      ".h",
+      ".hpp"
+    ],
+    "rules": null,
+    "defaultArgs": []
+  },
+  "cppcheck": {
+    "path": "/usr/bin/cppcheck",
+    "enabled": true,
+    "timeoutMs": 300000,
+    "supportedFileTypes": [
+      ".c",
+      ".cpp",
+      ".h",
+      ".hpp"
+    ],
+    "rules": null,
+    "defaultArgs": [
+      "--enable=all",
+      "--xml"
+    ]
+  },
+  "clangStaticAnalyzer": {
+    "path": "/usr/bin/scan-build",
+    "enabled": true,
+    "timeoutMs": 300000,
+    "supportedFileTypes": [
+      ".c",
+      ".cpp",
+      ".h",
+      ".hpp",
+      ".m",
+      ".mm"
+    ],
+    "rules": null,
+    "defaultArgs": [
+      "--status-bugs"
+    ]
+  }
+}
