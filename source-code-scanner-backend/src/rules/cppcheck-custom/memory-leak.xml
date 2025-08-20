@@ -1,0 +1,13 @@
+const memoryLeakRule = `<?xml version="1.0" encoding="UTF-8"?>
+<rule version="1">
+  <tokenlist>
+    <token str="malloc"/>
+    <token str="("/>
+  </tokenlist>
+  <pattern>%var% = malloc ( %any% ) ;</pattern>
+  <message>
+    <id>customMemoryLeak</id>
+    <severity>warning</severity>
+    <msg>Memory allocated with malloc() should be freed with free().</msg>
+  </message>
+</rule>`;

@@ -27,7 +27,7 @@ const scanSchema = new mongoose.Schema({
   tools: [{
     type: String,
     // FIXED: Updated enum to match vulnerability model and scanner factory
-    enum: ['semgrep', 'snyk', 'clangTidy', 'cppcheck', 'clangStaticAnalyzer']
+    enum: ['semgrep', 'snyk', 'clangTidy', 'cppcheck', 'clangStaticAnalyzer','cppcheckCustom']
   }],
   uploadedFiles: [{
     originalName: String,

@@ -1,0 +1,13 @@
+const doubleFreeRule = `<?xml version="1.0" encoding="UTF-8"?>
+<rule version="1">
+  <tokenlist>
+    <token str="free"/>
+    <token str="("/>
+  </tokenlist>
+  <pattern>free ( %var% ) ; %any%* free ( %var% ) ;</pattern>
+  <message>
+    <id>customDoubleFree</id>
+    <severity>error</severity>
+    <msg>Potential double free detected. Memory freed twice.</msg>
+  </message>
+</rule>`;

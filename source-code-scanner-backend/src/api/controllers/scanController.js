@@ -17,6 +17,13 @@ const scanController = {
       console.log('Files received:', req.files ? req.files.length : 'undefined');
       console.log('Request body:', req.body);
       // console.log('User info:', req.user);
+
+      console.log('=== DEBUG REQUEST ===');
+      console.log('req.body:', req.body);
+      console.log('req.body.tools:', req.body.tools);
+      console.log('typeof req.body.tools:', typeof req.body.tools);
+      console.log('Array.isArray(req.body.tools):', Array.isArray(req.body.tools));
+      console.log('=====================');
       
       const scanData = req.body;
       const files = req.files;

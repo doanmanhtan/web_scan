@@ -85,5 +85,25 @@
     "defaultArgs": [
       "--status-bugs"
     ]
+  },
+  "cppcheckCustom": {
+    "path": "/home/kali/Desktop/web/web_scan/source-code-scanner-backend/src",
+    "enabled": true,
+    "timeoutMs": 300000,
+    "supportedFileTypes": [
+      ".c",
+      ".cpp",
+      ".h",
+      ".hpp",
+      ".cc",
+      ".cxx",
+      ".c++"
+    ],
+    "rules": "/home/kali/Desktop/web/web_scan/source-code-scanner-backend/src/rules/cppcheck-custom",
+    "defaultArgs": [
+      "--enable=all",
+      "--xml",
+      "--xml-version=2"
+    ]
   }
 }

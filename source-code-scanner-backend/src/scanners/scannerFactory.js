@@ -9,7 +9,7 @@ const semgrepScanner = require('./semgrepScanner');     // old object pattern
 const clangTidyScanner = require('./clangTidyScanner'); // old object pattern
 
 // Import NEW pattern scanners (classes) - with fallback
-let CppcheckScanner, ClangStaticAnalyzerScanner;
+let CppcheckScanner, ClangStaticAnalyzerScanner,CppcheckCustomScanner;
 try {
   CppcheckScanner = require('./cppcheckScanner');
 } catch (error) {
@@ -20,6 +20,14 @@ try {
   ClangStaticAnalyzerScanner = require('./clangStaticAnalyzerScanner');
 } catch (error) {
   console.warn('⚠️ ClangStaticAnalyzerScanner not found:', error.message);
+}
+
+// ADD THIS - Import CppcheckCustomScanner
+try {
+  CppcheckCustomScanner = require('./cppcheckCustomScanner');
+  console.log('✅ CppcheckCustomScanner imported successfully');
+} catch (error) {
+  console.warn('⚠️ CppcheckCustomScanner not found:', error.message);
 }
 
 /**
@@ -48,7 +56,13 @@ class ScannerFactory {
     } else {
       console.warn('⚠️ cppcheck scanner not available');
     }
-    
+    // Trong method registerScanners(), thêm:
+    if (CppcheckCustomScanner) {
+      this.scanners.set('cppcheckCustom', { type: 'class', scanner: CppcheckCustomScanner });
+      console.log('✅ cppcheckCustom scanner registered');
+    } else {
+      console.warn('⚠️ cppcheckCustom scanner not available');
+    }
     if (ClangStaticAnalyzerScanner) {
       this.scanners.set('clangStaticAnalyzer', { type: 'class', scanner: ClangStaticAnalyzerScanner });
     } else {
@@ -125,7 +139,11 @@ class ScannerFactory {
       
       // Standard scanners
       'semgrep': 'semgrep',
-      'snyk': 'snyk'
+      'snyk': 'snyk',
+
+      'cppcheck-custom': 'cppcheckCustom',
+      'cppcheck_custom': 'cppcheckCustom',
+      'cppcheckcustom': 'cppcheckCustom'
     };
     
     return nameMap[name] || scannerType;

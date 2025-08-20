@@ -14,7 +14,7 @@ const appConfig = require('../config/app');
 const { maxScanThreads, defaultScanTimeout } = require('../config/scanners');
 
 // FIXED: Define available scanners directly
-const availableScanners = ['semgrep', 'snyk', 'clangTidy', 'cppcheck', 'clangStaticAnalyzer'];
+const availableScanners = ['semgrep', 'snyk', 'clangTidy', 'cppcheck', 'clangStaticAnalyzer', 'cppcheckCustom'];
 
 /**
  * Service for managing scans - FIXED VERSION
@@ -180,7 +180,14 @@ class ScanService {
         'cpp-check': 'cppcheck',
         'cpp_check': 'cppcheck',
         'semgrep': 'semgrep',
-        'snyk': 'snyk'
+        'snyk': 'snyk',
+        // Cppcheck Custom variations  
+        'cppcheckCustom': 'cppcheckCustom', // FIXED: Add exact match
+        'cppcheck-custom': 'cppcheckCustom',
+        'cppcheck_custom': 'cppcheckCustom',
+        'cppcheckcustom': 'cppcheckCustom',
+        'cppcheck-docker': 'cppcheckCustom',
+        'cppcheckdocker': 'cppcheckCustom'
       };
       
       const mappedTool = toolMapping[normalizedTool] || normalizedTool;

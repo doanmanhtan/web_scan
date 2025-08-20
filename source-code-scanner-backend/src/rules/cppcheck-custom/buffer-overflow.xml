@@ -1,0 +1,14 @@
+// Tạo file: src/rules/cppcheck-custom/buffer-overflow.xml
+const bufferOverflowRule = `<?xml version="1.0" encoding="UTF-8"?>
+<rule version="1">
+  <tokenlist>
+    <token str="strcpy"/>
+    <token str="("/>
+  </tokenlist>
+  <pattern>strcpy ( %var% , %any% )</pattern>
+  <message>
+    <id>customBufferOverflow</id>
+    <severity>error</severity>
+    <msg>Potential buffer overflow with strcpy(). Consider using strncpy() or safer alternatives.</msg>
+  </message>
+</rule>`;
