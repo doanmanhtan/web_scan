@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Table,
@@ -15,7 +15,10 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Tooltip
+  Tooltip,
+  CircularProgress,
+  Alert,
+  Typography,
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
@@ -27,21 +30,7 @@ import {
   Edit as EditIcon
 } from '@mui/icons-material';
 
-// Mock data for reports
-const mockReports = [
-  { id: 1, name: 'Project Alpha Full Scan', date: '2025-04-22 10:30:45', user: 'admin', status: 'completed', issuesCount: 23 },
-  { id: 2, name: 'Security Audit - Module A', date: '2025-04-20 14:22:18', user: 'security_team', status: 'completed', issuesCount: 12 },
-  { id: 3, name: 'Code Quality Review', date: '2025-04-18 09:15:30', user: 'dev_team', status: 'completed', issuesCount: 17 },
-  { id: 4, name: 'Memory Safety Check', date: '2025-04-15 16:45:12', user: 'admin', status: 'completed', issuesCount: 8 },
-  { id: 5, name: 'Performance Optimization', date: '2025-04-12 11:20:34', user: 'dev_team', status: 'completed', issuesCount: 5 },
-  { id: 6, name: 'Weekly Security Scan', date: '2025-04-10 08:30:00', user: 'security_team', status: 'completed', issuesCount: 15 },
-  { id: 7, name: 'Core Module Scan', date: '2025-04-08 13:25:18', user: 'admin', status: 'completed', issuesCount: 19 },
-  { id: 8, name: 'API Integration Test', date: '2025-04-05 15:40:22', user: 'dev_team', status: 'completed', issuesCount: 7 },
-  { id: 9, name: 'Frontend Code Review', date: '2025-04-03 10:15:30', user: 'dev_team', status: 'completed', issuesCount: 11 },
-  { id: 10, name: 'Monthly Security Audit', date: '2025-04-01 09:00:00', user: 'security_team', status: 'completed', issuesCount: 22 },
-];
-
-const ReportTable = () => {
+const ReportTable = ({ reports = [], loading = false, error = null, onViewReport, onDownloadReport, onDeleteReport }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -67,7 +56,28 @@ const ReportTable = () => {
   };
 
   const handleMenuAction = (action) => {
-    console.log(`${action} report: ${selectedReportId}`);
+    switch (action) {
+      case 'view':
+        if (onViewReport) onViewReport(selectedReportId);
+        break;
+      case 'download':
+        if (onDownloadReport) onDownloadReport(selectedReportId);
+        break;
+      case 'delete':
+        if (onDeleteReport) onDeleteReport(selectedReportId);
+        break;
+      case 'print':
+        console.log(`Print report: ${selectedReportId}`);
+        break;
+      case 'share':
+        console.log(`Share report: ${selectedReportId}`);
+        break;
+      case 'rename':
+        console.log(`Rename report: ${selectedReportId}`);
+        break;
+      default:
+        console.log(`Unknown action: ${action}`);
+    }
     handleCloseMenu();
   };
 
@@ -76,6 +86,23 @@ const ReportTable = () => {
     if (count > 10) return 'warning';
     return 'default';
   };
+
+  if (loading) {
+    return (
+      <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography sx={{ mt: 2 }}>Loading reports...</Typography>
+      </Paper>
+    );
+  }
+
+  if (error) {
+    return (
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Alert severity="error">{error}</Alert>
+      </Paper>
+    );
+  }
 
   return (
     <Paper variant="outlined">
@@ -92,7 +119,7 @@ const ReportTable = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {mockReports
+            {reports
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((report) => (
                 <TableRow key={report.id} hover>
@@ -132,18 +159,29 @@ const ReportTable = () => {
                   </TableCell>
                 </TableRow>
               ))}
+            {reports.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    No reports found
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
 
       <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[5, 10, 25, 50]}
         component="div"
-        count={mockReports.length}
+        count={reports.length}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
+        labelRowsPerPage="Rows per page:"
+        labelDisplayedRows={({ from, to, count }) => `${from}–${to} of ${count}`}
       />
 
       <Menu

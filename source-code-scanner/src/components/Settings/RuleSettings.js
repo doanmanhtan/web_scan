@@ -404,8 +404,11 @@ const RuleSettings = () => {
     }
   };
 
-  const categories = ['all', 'security', 'performance', 'style', 'memory', 'quality'];
-  const scanners = ['all', 'semgrep', 'snyk', 'clangtidy', 'cppcheck'];
+  // const categories = ['all', 'security', 'performance', 'style', 'memory', 'quality'];
+  const categories = ['all'];
+
+  // const scanners = ['all', 'semgrep', 'snyk', 'clangtidy', 'cppcheck','cppcheckCustom', 'ClclangStaticAnalyzeran'];
+  const scanners = ['all', 'semgrep','cppcheckCustom'];
 
   if (showDetailView && selectedRuleId) {
     return (
